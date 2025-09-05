@@ -1,0 +1,217 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String        @id @default(cuid())
+  email     String        @unique
+  phone     String?       @unique
+  role      Role
+  status    String        @default("active")
+  createdAt DateTime      @default(now())
+
+  // one-to-one
+  profile   Profile?
+
+  // one-to-one provider profile (if this user is a provider)
+  provider  Provider?
+
+  // back-relations (added)
+  jobsAsCustomer   Job[]          @relation("CustomerJobs")
+  messagesSent     ChatMessage[]  @relation("UserMessages")
+  payments         Payment[]
+  reviewsGiven     Review[]       @relation("UserReviews") // already referenced by Review.rater
+  reviewsReceived  Review[]       @relation("UserReviewsReceived") // optional convenience backref
+}
+
+model Profile {
+  id        String  @id @default(cuid())
+  user      User    @relation(fields: [userId], references: [id])
+  userId    String  @unique
+  firstName String?
+  lastName  String?
+  avatarUrl String?
+  city      String?
+  state     String?
+  rating    Float   @default(0)
+}
+
+model Provider {
+  id               String   @id @default(cuid())
+  user             User     @relation(fields: [userId], references: [id])
+  userId           String   @unique
+  companyName      String?
+  serviceRadiusKm  Int      @default(15)
+  online           Boolean  @default(false)
+  kycStatus        String   @default("pending")
+  stripeAccountId  String?
+
+  services         ProviderService[]
+  documents        ProviderDocument[]
+  availability     Availability[]
+
+  // back-relations (added)
+  quotes           Quote[]
+  assignments      Assignment[]
+}
+
+model ProviderDocument {
+  id         String   @id @default(cuid())
+  provider   Provider @relation(fields: [providerId], references: [id])
+  providerId String
+  docType    String
+  url        String
+  verifiedAt DateTime?
+}
+
+model Category {
+  id       String     @id @default(cuid())
+  name     String
+  slug     String     @unique
+  parentId String?
+  parent   Category?  @relation("CategoryParent", fields: [parentId], references: [id])
+  children Category[] @relation("CategoryParent")
+
+  services Service[]
+  // back-relations (added)
+  jobs     Job[]
+}
+
+model Service {
+  id          String   @id @default(cuid())
+  category    Category @relation(fields: [categoryId], references: [id])
+  categoryId  String
+  name        String
+  basePrice   Int      @default(0)
+  unit        String   @default("hour")
+  metadata    Json?
+  providers   ProviderService[]
+}
+
+model ProviderService {
+  id            String    @id @default(cuid())
+  provider      Provider  @relation(fields: [providerId], references: [id])
+  providerId    String
+  service       Service   @relation(fields: [serviceId], references: [id])
+  serviceId     String
+  priceOverride Int?
+  minCalloutFee Int?
+}
+
+model Availability {
+  id         String   @id @default(cuid())
+  provider   Provider @relation(fields: [providerId], references: [id])
+  providerId String
+  weekday    Int
+  startTime  String
+  endTime    String
+  overrides  Json?
+}
+
+model Job {
+  id            String      @id @default(cuid())
+
+  // customer relation (name the relation so the backref is clear)
+  customer      User        @relation("CustomerJobs", fields: [customerId], references: [id])
+  customerId    String
+
+  // category relation
+  category      Category    @relation(fields: [categoryId], references: [id])
+  categoryId    String
+
+  status        String      @default("open")
+  address       String?
+  lat           Float?
+  lng           Float?
+  description   String?
+  mediaUrls     String[]
+  createdAt     DateTime    @default(now())
+  scheduledFor  DateTime?
+  requiresQuote Boolean     @default(true)
+
+  quotes        Quote[]
+  assignments   Assignment[]
+  messages      ChatMessage[]
+  payment       Payment?
+  review        Review?
+}
+
+model Quote {
+  id         String    @id @default(cuid())
+  job        Job       @relation(fields: [jobId], references: [id])
+  jobId      String
+  provider   Provider  @relation(fields: [providerId], references: [id])
+  providerId String
+  total      Int
+  expiresAt  DateTime
+  notes      String?
+  status     String    @default("pending")
+}
+
+model Assignment {
+  id         String    @id @default(cuid())
+  job        Job       @relation(fields: [jobId], references: [id])
+  jobId      String
+  provider   Provider  @relation(fields: [providerId], references: [id])
+  providerId String
+  acceptedAt DateTime?
+  etaSeconds Int?
+  startAt    DateTime?
+  completeAt DateTime?
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  job       Job      @relation(fields: [jobId], references: [id])
+  jobId     String
+
+  sender    User     @relation("UserMessages", fields: [senderId], references: [id])
+  senderId  String
+
+  kind      String   @default("text")
+  content   String
+  createdAt DateTime @default(now())
+}
+
+model Payment {
+  id                   String   @id @default(cuid())
+  job                  Job      @relation(fields: [jobId], references: [id])
+  jobId                String   @unique
+
+  customer             User     @relation(fields: [customerId], references: [id])
+  customerId           String
+
+  amount               Int
+  currency             String   @default("usd")
+  stripePaymentIntentId String?
+  status               String   @default("requires_capture")
+}
+
+model Review {
+  id          String   @id @default(cuid())
+  job         Job      @relation(fields: [jobId], references: [id])
+  jobId       String   @unique
+
+  // rater is a User (backref is User.reviewsGiven)
+  rater       User     @relation("UserReviews", fields: [raterUserId], references: [id])
+  raterUserId String
+
+  // ratee is also a User (separate relation name so it doesn't collide)
+  ratee       User     @relation("UserReviewsReceived", fields: [rateeUserId], references: [id])
+  rateeUserId String
+
+  stars       Int
+  text        String?
+  createdAt   DateTime @default(now())
+}
+
+enum Role {
+  customer
+  provider
+  admin
+}

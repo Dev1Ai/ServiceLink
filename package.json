@@ -1,0 +1,27 @@
+{
+  "name": "servicelink-monorepo",
+  "private": true,
+  "packageManager": "pnpm@9.0.0",
+  "scripts": {
+    "dev": "turbo run dev --parallel",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "db:migrate": "prisma migrate dev --name init",
+    "db:generate": "prisma generate",
+    "db:seed": "tsx prisma/seed.ts"
+  },
+  "devDependencies": {
+    "turbo": "2.1.2",
+    "typescript": "5.6.2",
+    "ts-node": "10.9.2",
+    "tsx": "4.15.7",
+    "eslint": "9.8.0",
+    "prettier": "3.3.3",
+    "dotenv": "16.4.5",
+    "prisma": "5.17.0"
+  },
+  "dependencies": {
+    "@prisma/client": "5.17.0"
+  }
+}

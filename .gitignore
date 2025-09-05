@@ -1,0 +1,20 @@
+# Node
+node_modules
+npm-debug.log*
+pnpm-lock.yaml
+dist
+.build
+.next
+.expo
+.expo-shared
+.expo/*
+.DS_Store
+
+# Env
+.env
+.env.*
+!.env.example
+
+# Prisma
+prisma/migrations
+.prisma

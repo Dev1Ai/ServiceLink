@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "builds": [
+    { "src": "apps/web/next.config.mjs", "use": "@vercel/next" }
+  ],
+  "env": {
+    "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY": "@clerk_publishable_key",
+    "NEXT_PUBLIC_POSTHOG_KEY": "@posthog_key"
+  }
+}
