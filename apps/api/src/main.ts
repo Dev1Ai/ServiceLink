@@ -2,10 +2,20 @@ import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { PrismaService } from './prisma/prisma.service';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const port = process.env.PORT || 3001;
+
+  // Enable CORS (allow specific origins via CORS_ORIGIN env, fallback to all in dev)
+  const origins = process.env.CORS_ORIGIN
+    ? process.env.CORS_ORIGIN.split(',').map((s) => s.trim()).filter(Boolean)
+    : undefined;
+  app.enableCors({
+    origin: origins && origins.length > 0 ? origins : true,
+    credentials: true,
+  });
 
   const config = new DocumentBuilder()
     .setTitle('ServiceLink API')
@@ -14,6 +24,10 @@ async function bootstrap() {
     .build();
   const doc = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('docs', app, doc);
+
+  // Ensure Prisma shutdown hooks for graceful exit
+  const prismaService = app.get(PrismaService);
+  await prismaService.enableShutdownHooks(app);
 
   await app.listen(port);
   console.log(`API listening on http://localhost:${port}`);
