@@ -23,6 +23,9 @@ jobs:
         with:
           node-version: 20
 
+      - name: Install Codex CLI
+        run: npm install -g @codex/cli
+
       - name: Run Codex Milestone Update
         run: |
           codex context add ./SERVICE\ APP\ CUSTOM\ INSTRUCTIONS.pdf || true
@@ -38,4 +41,3 @@ jobs:
           - Immediate next steps
           - 📌 Blockers/TODOs
           " || true
-
