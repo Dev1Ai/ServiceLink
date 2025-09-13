@@ -7,11 +7,13 @@ export class UserListItemDto {
   @ApiProperty()
   email!: string;
 
-  @ApiProperty({ enum: ['customer', 'provider', 'admin'] })
-  role!: 'customer' | 'provider' | 'admin';
-
   @ApiProperty()
-  status!: string;
+  name!: string;
+
+  @ApiProperty({ enum: ['CUSTOMER', 'PROVIDER', 'ADMIN'] })
+  role!: 'CUSTOMER' | 'PROVIDER' | 'ADMIN';
+
+  // status removed from current schema
 
   @ApiProperty({ type: String, format: 'date-time' })
   createdAt!: Date;
@@ -27,19 +29,32 @@ export class ProfileDto {
   @ApiPropertyOptional()
   avatarUrl?: string | null;
 
-  @ApiPropertyOptional()
-  city?: string | null;
+  // city/state/rating not in current schema
+}
 
-  @ApiPropertyOptional()
-  state?: string | null;
+export class ProviderSummaryDto {
+  @ApiProperty()
+  id!: string;
 
   @ApiProperty()
-  rating!: number;
+  kycStatus!: string;
+
+  @ApiProperty({ required: false, nullable: true })
+  stripeAccountId?: string | null;
+
+  @ApiProperty()
+  online!: boolean;
+
+  @ApiProperty({ required: false, nullable: true })
+  serviceRadiusKm?: number | null;
 }
 
 export class UserDetailDto extends UserListItemDto {
   @ApiPropertyOptional({ type: ProfileDto, nullable: true })
   profile?: ProfileDto | null;
+
+  @ApiPropertyOptional({ type: ProviderSummaryDto, nullable: true })
+  provider?: ProviderSummaryDto | null;
 }
 
 export class PaginatedUsersDto {
@@ -49,4 +64,3 @@ export class PaginatedUsersDto {
   @ApiPropertyOptional()
   nextCursor?: string;
 }
-

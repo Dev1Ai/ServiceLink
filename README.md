@@ -40,6 +40,17 @@ pnpm dev
 
 Copy `.env.example` to `.env` and fill secrets. The API reads `.env` at repo root.
 
+Required keys for auth and provider onboarding:
+
+- `JWT_SECRET` — used to sign API JWTs.
+- `STRIPE_SECRET_KEY` or `STRIPE_SECRET` — Stripe secret for Connect onboarding.
+- `STRIPE_WEBHOOK_SECRET` — verify Stripe webhooks (optional in dev).
+- `STRIPE_RETURN_URL` / `STRIPE_REFRESH_URL` — onboarding redirect URLs.
+
+Notes:
+- If Stripe secrets are missing or obviously placeholders, the API returns a mock onboarding URL (`https://connect.stripe.com/setup/mock`) so you can continue local dev.
+- Swagger UI is available at `http://localhost:3001/docs` with the `auth` and `providers` tags.
+
 ## CI
 
 GitHub Actions workflow in `.github/workflows/ci.yml` lints, typechecks, builds.  
@@ -56,3 +67,46 @@ Add cloud secrets as repository secrets before enabling deploy steps.
 - M1: Auth + Provider onboarding (Clerk + Stripe Connect).  
 - Wire real WebSockets (presence) & Redis in API.  
 - Add PostHog, Sentry & OpenTelemetry exporters.
+
+## API cURL Cheatsheet
+
+Auth (email/password):
+
+```bash
+# Signup (defaults role to CUSTOMER when omitted)
+curl -s -X POST http://localhost:3001/auth/signup \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "email": "alice@example.com",
+    "password": "password123",
+    "name": "Alice Example",
+    "role": "CUSTOMER"
+  }'
+
+# Login
+TOKEN=$(curl -s -X POST http://localhost:3001/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"alice@example.com","password":"password123"}' | jq -r .access_token)
+
+echo "TOKEN: ${TOKEN:0:20}..."
+
+# Current user
+curl -s -H "Authorization: Bearer $TOKEN" http://localhost:3001/auth/me | jq .
+```
+
+Providers (requires role PROVIDER):
+
+```bash
+# Login seeded provider (from seed script)
+PROV_TOKEN=$(curl -s -X POST http://localhost:3001/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"provider@example.com","password":"password123"}' | jq -r .access_token)
+
+# Onboarding link (mock URL unless Stripe secrets are set)
+curl -s -X POST http://localhost:3001/providers/onboarding \
+  -H "Authorization: Bearer $PROV_TOKEN" | jq .
+
+# Provider profile
+curl -s -H "Authorization: Bearer $PROV_TOKEN" \
+  http://localhost:3001/providers/me | jq .
+```

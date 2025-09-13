@@ -1,0 +1,55 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CUSTOMER
+  PROVIDER
+  ADMIN
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String
+  role      Role     @default(CUSTOMER)
+  createdAt DateTime @default(now())
+
+  profile   Profile?
+  provider  Provider?
+}
+
+model Profile {
+  id        String   @id @default(cuid())
+  firstName String
+  lastName  String
+  avatarUrl String?
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Provider {
+  id                String    @id @default(cuid())
+  userId            String    @unique
+  user              User      @relation(fields: [userId], references: [id])
+  stripeAccountId   String?
+  kycStatus         String    @default("pending")
+  serviceRadiusKm   Int?
+  online            Boolean   @default(false)
+  services          Service[]
+}
+
+model Service {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  price       Int?
+  providerId  String
+  provider    Provider @relation(fields: [providerId], references: [id])
+}

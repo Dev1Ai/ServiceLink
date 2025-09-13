@@ -25,3 +25,4 @@
 - Next.js config cleaned up (removed experimental appDir warning)
 - Consider normalizing DTOs across auth/users/providers to one shared shape and extracting to `packages/schemas`
 
+\nLast updated: 2025-09-13 01:05:34Z
