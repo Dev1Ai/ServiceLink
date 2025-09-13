@@ -1,0 +1,41 @@
+name: Codex Milestone Report
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "apps/**"
+      - "packages/**"
+      - "infra/**"
+      - "SERVICE APP CUSTOM INSTRUCTIONS.pdf"
+      - "MILESTONES.md"
+
+jobs:
+  milestone-report:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Run Codex Milestone Update
+        run: |
+          codex context add ./SERVICE\ APP\ CUSTOM\ INSTRUCTIONS.pdf || true
+          codex context add ./MILESTONES.md || true
+          codex run "
+          Review repo state vs milestones in SERVICE APP CUSTOM INSTRUCTIONS.pdf.
+          Update MILESTONES.md with current ✅ / ⚡ status.
+          Append milestone summary into PR description:
+          ## 📊 Milestone Progress
+          - ✅ Current milestone (number & name)
+          - Completed subtasks
+          - ⚡ Next milestone (number & name)
+          - Immediate next steps
+          - 📌 Blockers/TODOs
+          " || true
+
