@@ -9,7 +9,7 @@ export const metadata = {
     siteName: 'ServiceLink',
     images: [
       {
-        url: 'https://servicelink.example/og.png',
+        url: 'https://servicelink.example/og.svg',
         width: 1200,
         height: 630,
         alt: 'ServiceLink',
@@ -22,7 +22,7 @@ export const metadata = {
     card: 'summary_large_image',
     title: 'ServiceLink — Home Services Marketplace',
     description: 'Find trusted local providers for home services. Simple, fast, reliable.',
-    images: ['https://servicelink.example/og.png'],
+    images: ['https://servicelink.example/og.svg'],
   },
 };
 
@@ -34,6 +34,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <nav aria-label="Primary">
             <a href="/">Home</a>
             <a href="/about">About</a>
+            <a href="/faq">FAQ</a>
+            <a href="/contact">Contact</a>
             <a href="/privacy">Privacy</a>
           </nav>
         </header>
