@@ -68,6 +68,10 @@ make compose-obs # compose profile: observability (prometheus, grafana, and db)
   - Serve `apps/marketing/out/` via any static host/CDN
 - CI workflow "Static Export" builds this site and enforces "no inline styles".
 
+Deploy options:
+- Netlify: repo root includes `netlify.toml` targeting `apps/marketing`.
+- AWS S3 + CloudFront: Terraform stub under `infra/terraform/marketing` (requires variables: `domain_name`, `acm_certificate_arn`).
+
 1) **Prereqs**: Node 20+, pnpm 9+, Docker Desktop (or compatible).  
 2) **Install deps**:
 ```bash
