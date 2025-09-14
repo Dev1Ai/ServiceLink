@@ -1,0 +1,28 @@
+name-template: 'v$NEXT_PATCH_VERSION'
+tag-template: 'v$NEXT_PATCH_VERSION'
+categories:
+  - title: '🚀 Features'
+    labels:
+      - 'feature'
+      - 'feat'
+      - 'export'
+      - 'security/csp'
+  - title: '🧪 Tests'
+    labels:
+      - 'e2e'
+  - title: '🛠 CI'
+    labels:
+      - 'ci'
+  - title: '🧰 Maintenance'
+    labels:
+      - 'chore'
+  - title: '📝 Docs'
+    labels:
+      - 'docs'
+change-template: '- $TITLE (#$NUMBER) by @$AUTHOR'
+template: |
+  ## Changes
+  $CHANGES
+
+  ## Notes
+  - See RELEASE_NOTES.md for highlights and setup guidance.
