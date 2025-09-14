@@ -20,3 +20,14 @@ variable "acm_certificate_arn" {
   type        = string
 }
 
+variable "hosted_zone_id" {
+  description = "Route53 Hosted Zone ID for the parent domain"
+  type        = string
+  default     = ""
+}
+
+variable "aliases" {
+  description = "Additional CNAME aliases for CloudFront (optional)"
+  type        = list(string)
+  default     = []
+}

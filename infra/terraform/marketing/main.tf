@@ -98,6 +98,8 @@ resource "aws_cloudfront_distribution" "cdn" {
     }
   }
 
+  aliases = concat([var.domain_name], var.aliases)
+
   viewer_certificate {
     acm_certificate_arn            = var.acm_certificate_arn
     ssl_support_method             = "sni-only"
@@ -114,3 +116,15 @@ output "cloudfront_domain" {
   value = aws_cloudfront_distribution.cdn.domain_name
 }
 
+# Optional Route53 alias record if hosted_zone_id provided
+resource "aws_route53_record" "cdn_alias" {
+  count   = length(var.hosted_zone_id) > 0 ? 1 : 0
+  zone_id = var.hosted_zone_id
+  name    = var.domain_name
+  type    = "A"
+  alias {
+    name                   = aws_cloudfront_distribution.cdn.domain_name
+    zone_id                = aws_cloudfront_distribution.cdn.hosted_zone_id
+    evaluate_target_health = false
+  }
+}

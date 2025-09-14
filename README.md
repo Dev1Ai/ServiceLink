@@ -72,6 +72,8 @@ make compose-obs # compose profile: observability (prometheus, grafana, and db)
 Deploy options:
 - Netlify: repo root includes `netlify.toml` targeting `apps/marketing`.
 - AWS S3 + CloudFront: Terraform stub under `infra/terraform/marketing` (requires variables: `domain_name`, `acm_certificate_arn`).
+  - Optional: set `hosted_zone_id` to create a Route53 alias record; set `aliases` for additional CNAMEs.
+  - After `terraform apply`, sync build output: `aws s3 sync apps/marketing/out/ s3://<bucket>/ --delete`.
 
 1) **Prereqs**: Node 20+, pnpm 9+, Docker Desktop (or compatible).  
 2) **Install deps**:
