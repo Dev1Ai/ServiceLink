@@ -2,6 +2,9 @@
 
 
 [![CI](https://github.com/Dev1ai/ServiceLink/actions/workflows/ci.yml/badge.svg)](https://github.com/Dev1ai/ServiceLink/actions/workflows/ci.yml)
+[![Static Export](https://github.com/Dev1ai/ServiceLink/actions/workflows/static-export.yml/badge.svg)](https://github.com/Dev1ai/ServiceLink/actions/workflows/static-export.yml)
+[![Release Drafter](https://github.com/Dev1ai/ServiceLink/actions/workflows/release-drafter.yml/badge.svg)](https://github.com/Dev1ai/ServiceLink/actions/workflows/release-drafter.yml)
+[![Release on Tag](https://github.com/Dev1ai/ServiceLink/actions/workflows/release-on-tag.yml/badge.svg)](https://github.com/Dev1ai/ServiceLink/actions/workflows/release-on-tag.yml)
 
 **Playbook Version:** Canvas “Custom Instructions – Build a Real‑Time Local Services Marketplace App (ChatGPT‑5 Playbook)” — current as of 2025‑08‑30  
 **Release Tag (proposal):** `v0.1.0-m0-bootstrap`
@@ -37,6 +40,17 @@ make compose-db  # compose profile: db only (postgres, redis)
 make compose-dev # compose profile: dev stack (api, web, and db)
 make compose-obs # compose profile: observability (prometheus, grafana, and db)
 ```
+
+## Observability
+- Bring up Prometheus and Grafana:
+  - `make compose-obs`
+  - Prometheus: http://localhost:9090
+  - Grafana: http://localhost:3030 (default admin/admin)
+  - Dashboards are provisioned from `infra/grafana/dashboards`.
+
+## Deploy
+- API (Render): see `infra/render.yaml`. Set env vars (DATABASE_URL, JWT_SECRET, etc.).
+- Web (Vercel): `apps/web` includes `vercel.json`. Set `NEXT_PUBLIC_API_BASE_URL` to your API URL.
 
 1) **Prereqs**: Node 20+, pnpm 9+, Docker Desktop (or compatible).  
 2) **Install deps**:
