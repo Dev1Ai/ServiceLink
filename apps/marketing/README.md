@@ -44,3 +44,6 @@ pnpm -C apps/marketing build
 - GitHub Pages: `marketing-pages` workflow builds and deploys.
 - AWS S3 + CloudFront: Terraform in `infra/terraform/marketing`; sync `out/` to S3 and optionally set Route53 alias.
 
+## Open Graph (OG) Image
+- To customize the social share image, add `apps/marketing/public/og.png` (1200×630 recommended).
+- Update the URLs in `app/layout.tsx` metadata `openGraph.images` and `twitter.images` to point to your deployed domain, e.g. `https://your-domain/og.png`.

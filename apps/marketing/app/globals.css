@@ -17,3 +17,14 @@ h2 { font-size: 24px; margin: 16px 0 8px; }
 p { line-height: 1.5; margin: 8px 0; }
 ul { padding-left: 18px; }
 
+/* Hero */
+.hero { padding: 48px 0; text-align: center; }
+.hero-title { font-size: 40px; line-height: 1.2; margin: 0 0 12px; }
+.hero-subtitle { font-size: 18px; color: var(--muted); margin-bottom: 20px; }
+.hero-cta { display: inline-block; background: #0b5fff; color: white; padding: 10px 16px; border-radius: 6px; border: 1px solid #094acc; }
+.hero-cta:hover { background: #094acc; text-decoration: none; }
+
+/* Feature grid */
+.grid-features { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-top: 24px; }
+.card { border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+.card h3 { margin: 0 0 6px; font-size: 18px; }
