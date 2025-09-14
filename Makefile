@@ -2,7 +2,7 @@
 
 SHELL := /bin/sh
 
-.PHONY: install dev api web seed e2e export stack-up stack-down db-up db-down
+.PHONY: install dev api web seed e2e export stack-up stack-down db-up db-down compose-dev compose-db compose-obs
 
 install:
 	@corepack enable || true
@@ -40,3 +40,12 @@ db-up:
 db-down:
 	docker compose -f infra/docker-compose.yml rm -sfv postgres redis || true
 
+# Compose with profiles
+compose-db:
+	docker compose -f infra/docker-compose.yml --profile db up -d
+
+compose-dev:
+	docker compose -f infra/docker-compose.yml --profile dev up -d
+
+compose-obs:
+	docker compose -f infra/docker-compose.yml --profile obs up -d

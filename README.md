@@ -33,6 +33,9 @@ make seed        # prisma generate/push/seed
 make dev         # turbo dev (API + Web)
 make e2e         # run Playwright tests (needs API up at :3001)
 make export      # static export of web (dynamic routes skipped)
+make compose-db  # compose profile: db only (postgres, redis)
+make compose-dev # compose profile: dev stack (api, web, and db)
+make compose-obs # compose profile: observability (prometheus, grafana, and db)
 ```
 
 1) **Prereqs**: Node 20+, pnpm 9+, Docker Desktop (or compatible).  
