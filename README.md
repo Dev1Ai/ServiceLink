@@ -7,6 +7,7 @@
 - [![Static Export](https://github.com/Dev1ai/ServiceLink/actions/workflows/static-export.yml/badge.svg)](https://github.com/Dev1ai/ServiceLink/actions/workflows/static-export.yml): build static site (dynamic [id] pages are not exported)
 - [![Release Drafter](https://github.com/Dev1ai/ServiceLink/actions/workflows/release-drafter.yml/badge.svg)](https://github.com/Dev1ai/ServiceLink/actions/workflows/release-drafter.yml)
 - [![Release on Tag](https://github.com/Dev1ai/ServiceLink/actions/workflows/release-on-tag.yml/badge.svg)](https://github.com/Dev1ai/ServiceLink/actions/workflows/release-on-tag.yml)
+- [![Marketing Deploy](https://github.com/Dev1ai/ServiceLink/actions/workflows/marketing-deploy.yml/badge.svg)](https://github.com/Dev1ai/ServiceLink/actions/workflows/marketing-deploy.yml)
 
 **Playbook Version:** Canvas “Custom Instructions – Build a Real‑Time Local Services Marketplace App (ChatGPT‑5 Playbook)” — current as of 2025‑08‑30  
 **Release Tag (proposal):** `v0.1.0-m0-bootstrap`

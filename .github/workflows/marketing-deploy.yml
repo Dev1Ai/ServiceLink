@@ -1,0 +1,48 @@
+name: Marketing Deploy (S3)
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'apps/marketing/**'
+      - '.github/workflows/marketing-deploy.yml'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+          run_install: false
+
+      - name: Install dependencies
+        run: pnpm i --frozen-lockfile=false
+
+      - name: Build marketing (static export)
+        run: pnpm -C apps/marketing build
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.MKT_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.MKT_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.MKT_AWS_REGION }}
+
+      - name: Sync to S3
+        run: aws s3 sync apps/marketing/out/ s3://${{ secrets.MKT_S3_BUCKET }}/ --delete
+
+      - name: Invalidate CloudFront (optional)
+        if: ${{ secrets.MKT_CLOUDFRONT_DIST != '' }}
+        run: aws cloudfront create-invalidation --distribution-id ${{ secrets.MKT_CLOUDFRONT_DIST }} --paths '/*'
+
