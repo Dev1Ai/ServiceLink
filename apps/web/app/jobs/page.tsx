@@ -103,6 +103,7 @@ export default function JobsPage() {
               <div className="font-12 text-faint mt-4">{new Date(j.createdAt).toLocaleString()}</div>
               <div className="mt-8 flex gap-8 flex-wrap">
                 <Link href={`/jobs/${j.id}/quotes`}>View quotes</Link>
+                <Link href={`/jobs/quotes?id=${encodeURIComponent(j.id)}`}>Quotes (static)</Link>
                 <Link href={`/jobs/${j.id}/quote`}>Provider quote form</Link>
                 <Link href={`/jobs/quote?id=${encodeURIComponent(j.id)}`}>Quote (static)</Link>
                 {j.key && <Link href={`/realtime?room=${encodeURIComponent('job:' + j.key)}`}>Open chat</Link>}

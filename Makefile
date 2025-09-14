@@ -27,6 +27,12 @@ e2e:
 export:
 	PNPM_HOME=$$PNPM_HOME pnpm --filter web run build:export
 
+staging-up:
+	docker compose -f infra/docker-compose.staging.yml up -d
+
+staging-down:
+	docker compose -f infra/docker-compose.staging.yml down
+
 # Docker Compose helpers
 stack-up:
 	docker compose -f infra/docker-compose.yml up -d postgres redis api web

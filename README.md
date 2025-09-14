@@ -52,6 +52,11 @@ make compose-obs # compose profile: observability (prometheus, grafana, and db)
 - API (Render): see `infra/render.yaml`. Set env vars (DATABASE_URL, JWT_SECRET, etc.).
 - Web (Vercel): `apps/web` includes `vercel.json`. Set `NEXT_PUBLIC_API_BASE_URL` to your API URL.
 
+### Local Staging
+- Build and run production-like containers locally:
+  - `make staging-up` (web on :3000, api on :3001, nginx on :8080)
+  - `make staging-down` to stop
+
 1) **Prereqs**: Node 20+, pnpm 9+, Docker Desktop (or compatible).  
 2) **Install deps**:
 ```bash
