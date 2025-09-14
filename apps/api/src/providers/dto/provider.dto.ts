@@ -50,3 +50,67 @@ export class ProviderMeDto {
   provider!: ProviderSummaryDto;
 }
 
+export class UserLiteDto {
+  @ApiPropertyOptional()
+  name?: string | null;
+
+  @ApiProperty()
+  email!: string;
+}
+
+export class ServiceCategoryDto {
+  @ApiProperty()
+  name!: string;
+
+  @ApiProperty()
+  slug!: string;
+}
+
+export class ServiceDto {
+  @ApiProperty()
+  id!: string;
+
+  @ApiProperty()
+  name!: string;
+
+  @ApiPropertyOptional({ nullable: true })
+  price?: number | null;
+
+  @ApiPropertyOptional()
+  description?: string;
+
+  @ApiPropertyOptional({ type: ServiceCategoryDto, nullable: true })
+  category?: ServiceCategoryDto | null;
+}
+
+export class ProviderListItemDto {
+  @ApiProperty() id!: string;
+  @ApiProperty() userId!: string;
+  @ApiProperty() online!: boolean;
+  @ApiPropertyOptional({ nullable: true }) serviceRadiusKm?: number | null;
+  @ApiPropertyOptional({ nullable: true }) lat?: number | null;
+  @ApiPropertyOptional({ nullable: true }) lng?: number | null;
+  @ApiProperty({ type: UserLiteDto }) user!: UserLiteDto;
+  @ApiProperty({ type: [ServiceDto] }) services!: ServiceDto[];
+  @ApiPropertyOptional({ nullable: true }) minServicePrice?: number | null;
+}
+
+export class ProviderNearItemDto extends ProviderListItemDto {
+  @ApiProperty() distanceKm!: number;
+}
+
+export class ProvidersSearchResponseDto {
+  @ApiProperty({ type: [ProviderListItemDto] }) items!: ProviderListItemDto[];
+  @ApiProperty() total!: number;
+  @ApiProperty() page!: number;
+  @ApiProperty() take!: number;
+  @ApiProperty() hasNext!: boolean;
+}
+
+export class ProvidersNearResponseDto {
+  @ApiProperty({ type: [ProviderNearItemDto] }) items!: ProviderNearItemDto[];
+  @ApiProperty() total!: number;
+  @ApiProperty() page!: number;
+  @ApiProperty() take!: number;
+  @ApiProperty() hasNext!: boolean;
+}

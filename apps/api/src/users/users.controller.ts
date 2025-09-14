@@ -1,9 +1,11 @@
 import { Controller, Get, Param, Query, NotFoundException, UseGuards, Req } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { ApiBearerAuth, ApiOkResponse, ApiNotFoundResponse, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { ApiBadRequestResponse, ApiBearerAuth, ApiOkResponse, ApiNotFoundResponse, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { PaginatedUsersDto, UserDetailDto } from './dto/user.dto';
 import { Role } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/jwt.guard';
+import { ErrorDto } from '../common/dto/error.dto';
+import type { AuthedRequest } from '../common/types/request';
 
 @ApiTags('users')
 @Controller('users')
@@ -15,7 +17,7 @@ export class UsersController {
   @ApiBearerAuth('bearer')
   @ApiOperation({ summary: 'Get current authenticated user' })
   @ApiOkResponse({ type: UserDetailDto })
-  async me(@Req() req: any) {
+  async me(@Req() req: AuthedRequest) {
     return this.prisma.user.findUnique({
       where: { id: req.user.sub },
       select: {
@@ -45,7 +47,7 @@ export class UsersController {
   ) {
     const take = Math.max(1, Math.min(100, Number.parseInt(takeQ ?? '20', 10) || 20));
 
-    const where: any = {};
+    const where: { role?: Role; email?: { contains: string; mode: 'insensitive' } } = {};
     if (role) {
       const r = String(role).toUpperCase() as Role;
       where.role = r;
@@ -80,6 +82,7 @@ export class UsersController {
   @ApiOperation({ summary: 'Get a user by id' })
   @ApiOkResponse({ type: UserDetailDto })
   @ApiNotFoundResponse({ description: 'User not found' })
+  @ApiBadRequestResponse({ type: ErrorDto })
   async getById(@Param('id') id: string) {
     const user = await this.prisma.user.findUnique({
       where: { id },

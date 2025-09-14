@@ -5,6 +5,10 @@ pnpm-lock.yaml
 dist
 .build
 .next
+.turbo
+.turbo/**
+**/*.log
+**/*.pid
 .expo
 .expo-shared
 .expo/*

@@ -4,20 +4,30 @@
   "version": "0.1.0",
   "scripts": {
     "dev": "next dev -p 3000",
-    "build": "next build && next export",
+    "build": "next build",
+    "build:export": "NEXT_OUTPUT=export next build",
     "start": "next start",
-    "lint": "eslint ."
+    "lint": "eslint . --no-inline-config",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
+    "leaflet": "1.9.4",
     "next": "14.2.5",
     "react": "18.3.1",
-    "react-dom": "18.3.1"
+    "react-dom": "18.3.1",
+    "react-leaflet": "4.2.1",
+    "socket.io-client": "4.7.5"
   },
   "devDependencies": {
     "@types/node": "20.14.9",
     "@types/react": "18.3.3",
     "@types/react-dom": "18.3.0",
-    "eslint": "9.8.0",
+    "@playwright/test": "^1.47.0",
+    "@typescript-eslint/parser": "7",
+    "eslint": "8.57.0",
+    "eslint-config-next": "14.2.5",
+    "eslint-plugin-react": "^7.33.2",
+    "eslint-plugin-react-hooks": "^4.6.0",
     "typescript": "5.6.2"
   }
 }

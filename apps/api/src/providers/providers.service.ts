@@ -66,7 +66,17 @@ export class ProvidersService {
         role: true,
         createdAt: true,
         profile: { select: { firstName: true, lastName: true, avatarUrl: true } },
-        provider: { select: { id: true, kycStatus: true, stripeAccountId: true, online: true, serviceRadiusKm: true } },
+        provider: {
+          select: {
+            id: true,
+            kycStatus: true,
+            stripeAccountId: true,
+            online: true,
+            serviceRadiusKm: true,
+            lat: true,
+            lng: true,
+          },
+        },
       },
     });
   }

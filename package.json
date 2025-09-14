@@ -8,7 +8,7 @@
     "lint": "turbo run lint",
     "format": "prettier --write .",
     "db:generate": "pnpm --filter api exec prisma generate --schema=apps/api/prisma/schema.prisma",
-    "db:push": "pnpm --filter api exec prisma db push --schema=apps/api/prisma/schema.prisma",
+    "db:push": "pnpm --filter api exec prisma db push --schema=prisma/schema.prisma",
     "db:seed": "pnpm --filter api exec prisma db seed --schema=apps/api/prisma/schema.prisma",
     "prisma:all": "pnpm --filter api prisma",
     "db:reset": "pnpm --filter api prisma migrate reset --force --skip-generate --skip-seed && pnpm db:seed",

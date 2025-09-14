@@ -1,0 +1,42 @@
+name: Static Export (web)
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  export-web:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+          run_install: false
+
+      - name: Install dependencies
+        run: pnpm i --frozen-lockfile=false
+
+      - name: Lint web
+        run: pnpm --filter web lint
+
+      - name: Enforce no inline style props in web
+        run: |
+          if grep -R --line-number --include='*.tsx' --include='*.ts' "style={{" apps/web; then
+            echo "Inline styles detected in apps/web. Please use CSS classes instead." >&2
+            exit 1
+          else
+            echo "No inline style props detected."
+          fi
+
+      - name: Build web (static export)
+        run: pnpm --filter web run build:export
+

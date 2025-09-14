@@ -1,4 +1,5 @@
 import { Body, Controller, Headers, Post, Req } from '@nestjs/common';
+import type { Request } from 'express';
 import { ApiExcludeEndpoint, ApiTags } from '@nestjs/swagger';
 import { PrismaService } from '../prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
@@ -10,11 +11,15 @@ export class StripeWebhookController {
 
   @Post('webhook')
   @ApiExcludeEndpoint()
-  async handleWebhook(@Req() req: any, @Body() body: any, @Headers('stripe-signature') sig?: string) {
+  async handleWebhook(
+    @Req() req: Request & { rawBody?: Buffer | string },
+    @Body() body: unknown,
+    @Headers('stripe-signature') sig?: string,
+  ) {
     const secret = this.config.get<string>('STRIPE_WEBHOOK_SECRET');
 
     // If no secret, assume dev mode and accept parsed JSON directly
-    let event: any = body;
+    let event: unknown = body;
     if (secret) {
       try {
         // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -28,8 +33,9 @@ export class StripeWebhookController {
       }
     }
 
-    if (event.type === 'account.updated') {
-      const acct = event.data.object as { id: string; requirements?: { disabled_reason?: string; past_due?: any[] } };
+    const ev = event as { type?: string; data?: { object?: { id: string; requirements?: { disabled_reason?: string; past_due?: unknown[] } } } };
+    if (ev?.type === 'account.updated' && ev?.data?.object) {
+      const acct = ev.data.object;
       const stripeAccountId = acct.id;
       // naive mapping: if no past_due and no disabled reason, consider verified
       const kycStatus = acct.requirements?.past_due?.length ? 'pending' : 'verified';

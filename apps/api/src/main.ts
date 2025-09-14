@@ -1,6 +1,19 @@
 import 'dotenv/config';
+// Optional Sentry init
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const Sentry = require('@sentry/node');
+  if (process.env.SENTRY_DSN) {
+    Sentry.init({ dsn: process.env.SENTRY_DSN, tracesSampleRate: 0.0 });
+    console.log('Sentry initialized');
+  }
+} catch {}
 import { NestFactory } from '@nestjs/core';
+import { ValidationPipe } from '@nestjs/common';
+import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+import { MetricsHttpHelper, MetricsService } from './metrics/metrics.service';
 import { raw } from 'express';
+import type { Request, Response, NextFunction } from 'express';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { PrismaService } from './prisma/prisma.service';
@@ -26,6 +39,25 @@ async function bootstrap() {
     .build();
   const doc = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('docs', app, doc);
+
+  // Global validation
+  app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
+  app.useGlobalFilters(new HttpExceptionFilter());
+
+  // HTTP request duration metrics
+  try {
+    const metrics = app.get(MetricsService);
+    const helper = new MetricsHttpHelper(metrics);
+    app.use((req: Request & { route?: { path?: string } }, res: Response, next: NextFunction) => {
+      const start = process.hrtime.bigint();
+      res.on('finish', () => {
+        const delta = Number(process.hrtime.bigint() - start) / 1e9;
+        const route = req?.route?.path || req?.originalUrl || req?.url || '/';
+        helper.record(req.method, route, res.statusCode, delta);
+      });
+      next();
+    });
+  } catch {}
 
   // Ensure Prisma shutdown hooks for graceful exit
   const prismaService = app.get(PrismaService);

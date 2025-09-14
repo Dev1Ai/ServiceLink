@@ -1,0 +1,11 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'servicelink-api'
+    metrics_path: /metrics
+    static_configs:
+      # Host API (macOS/Windows Docker Desktop)
+      - targets: ['host.docker.internal:3001']
+      # Containerized API service (when running api service in compose)
+      - targets: ['api:3001']

@@ -23,6 +23,8 @@ model User {
 
   profile   Profile?
   provider  Provider?
+  jobs      Job[]      @relation("UserJobs")
+  messages  ChatMessage[]
 }
 
 model Profile {
@@ -43,6 +45,10 @@ model Provider {
   serviceRadiusKm   Int?
   online            Boolean   @default(false)
   services          Service[]
+  quotes            Quote[]
+  assignments       Assignment[]
+  lat               Float?
+  lng               Float?
 }
 
 model Service {
@@ -52,4 +58,66 @@ model Service {
   price       Int?
   providerId  String
   provider    Provider @relation(fields: [providerId], references: [id])
+  categoryId  String?
+  category    Category? @relation(fields: [categoryId], references: [id])
+}
+
+model Category {
+  id       String     @id @default(cuid())
+  name     String
+  slug     String     @unique
+  parentId String?
+  parent   Category?  @relation("CategoryParent", fields: [parentId], references: [id])
+  children Category[] @relation("CategoryParent")
+
+  services Service[]
+}
+
+model Job {
+  id          String         @id @default(cuid())
+  key         String         @unique
+  title       String
+  description String
+  customerId  String
+  customer    User           @relation("UserJobs", fields: [customerId], references: [id])
+  createdAt   DateTime       @default(now())
+  messages    ChatMessage[]
+  quotes      Quote[]
+  assignment  Assignment?
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  jobId     String
+  job       Job      @relation(fields: [jobId], references: [id])
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  content   String
+  createdAt DateTime @default(now())
+}
+
+model Quote {
+  id         String    @id @default(cuid())
+  jobId      String
+  job        Job       @relation(fields: [jobId], references: [id])
+  providerId String
+  provider   Provider  @relation(fields: [providerId], references: [id])
+  total      Int
+  status     String    @default("pending")
+  createdAt  DateTime  @default(now())
+
+  @@unique([jobId, providerId])
+}
+
+model Assignment {
+  id         String    @id @default(cuid())
+  jobId      String    @unique
+  job        Job       @relation(fields: [jobId], references: [id])
+  providerId String
+  provider   Provider  @relation(fields: [providerId], references: [id])
+  acceptedAt DateTime  @default(now())
+  status     String    @default("active")
+  completedAt DateTime?
+  customerVerifiedAt DateTime?
+  createdAt  DateTime  @default(now())
 }

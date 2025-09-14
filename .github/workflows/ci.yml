@@ -1,21 +1,136 @@
-name: ci
+name: CI
+
 on:
   push:
-    branches: [ main ]
+    branches: [ main, codex/**, feature/** ]
   pull_request:
     branches: [ main ]
+
 jobs:
-  build:
+  build-and-test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: servicelink
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9
-      - uses: actions/setup-node@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'pnpm'
-      - run: pnpm i --frozen-lockfile=false
-      - run: pnpm db:generate
-      - run: pnpm -w build
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+          run_install: false
+
+      - name: Install dependencies
+        run: pnpm i --frozen-lockfile=false
+
+      - name: Prepare database (Prisma generate/push/seed)
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/servicelink
+        run: |
+          pnpm db:generate
+          pnpm db:push
+          pnpm db:seed
+
+      - name: Lint web
+        run: pnpm --filter web lint
+
+      - name: Enforce no inline style props in web
+        run: |
+          if grep -R --line-number --include='*.tsx' --include='*.ts' "style={{" apps/web; then
+            echo "Inline styles detected in apps/web. Please use CSS classes instead." >&2
+            exit 1
+          else
+            echo "No inline style props detected."
+          fi
+
+      - name: Lint api
+        run: pnpm --filter api lint
+
+      - name: Test api (unit + http)
+        run: pnpm --filter api exec jest -c jest.config.ts --passWithNoTests
+
+      - name: Build and start API
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/servicelink
+          JWT_SECRET: test-secret
+          PORT: 3001
+          AUTH_LOGIN_RATE_TTL: 60
+          AUTH_LOGIN_RATE_LIMIT: 1
+        run: |
+          pnpm --filter api build
+          node apps/api/dist/main.js &
+          echo $! > api-server.pid
+          # wait for api
+          for i in $(seq 1 60); do
+            if curl -sf http://localhost:3001/health >/dev/null; then
+              echo "API server is up"; break
+            fi
+            sleep 1
+          done
+
+      - name: Build web (server build)
+        run: pnpm --filter web run build
+
+      - name: Start web with strict CSP
+        env:
+          ENABLE_STRICT_CSP: true
+        run: |
+          pnpm --filter web start &
+          echo $! > web-server.pid
+          # wait for server
+          for i in $(seq 1 30); do
+            if curl -sI http://localhost:3000 >/dev/null; then
+              echo "Web server is up"; break
+            fi
+            sleep 1
+          done
+
+      - name: Verify CSP header on home page
+        run: |
+          curl -sI http://localhost:3000 | tee headers.txt
+          if ! grep -i "^content-security-policy:" headers.txt; then
+            echo "CSP header missing on /" >&2; exit 1; fi
+
+      - name: Install Playwright Browsers
+        run: pnpm --filter web exec playwright install --with-deps
+
+      - name: E2E (Playwright) — CSP smoke tests
+        working-directory: apps/web
+        env:
+          ENABLE_STRICT_CSP: true
+          E2E_API_BASE: http://localhost:3001
+        run: pnpm test:e2e
+
+      - name: Stop web server
+        if: always()
+        run: |
+          if [ -f web-server.pid ]; then kill $(cat web-server.pid) || true; fi
+          if [ -f api-server.pid ]; then kill $(cat api-server.pid) || true; fi
