@@ -1,11 +1,12 @@
 # ServiceLink — Real‑Time Local Services Marketplace (M0 Bootstrap)
 
 
-[![CI](https://github.com/Dev1ai/ServiceLink/actions/workflows/ci.yml/badge.svg)](https://github.com/Dev1ai/ServiceLink/actions/workflows/ci.yml)
-[![Web E2E](https://github.com/Dev1ai/ServiceLink/actions/workflows/e2e.yml/badge.svg)](https://github.com/Dev1ai/ServiceLink/actions/workflows/e2e.yml)
-[![Static Export](https://github.com/Dev1ai/ServiceLink/actions/workflows/static-export.yml/badge.svg)](https://github.com/Dev1ai/ServiceLink/actions/workflows/static-export.yml)
-[![Release Drafter](https://github.com/Dev1ai/ServiceLink/actions/workflows/release-drafter.yml/badge.svg)](https://github.com/Dev1ai/ServiceLink/actions/workflows/release-drafter.yml)
-[![Release on Tag](https://github.com/Dev1ai/ServiceLink/actions/workflows/release-on-tag.yml/badge.svg)](https://github.com/Dev1ai/ServiceLink/actions/workflows/release-on-tag.yml)
+**Workflows**
+- [![CI](https://github.com/Dev1ai/ServiceLink/actions/workflows/ci.yml/badge.svg)](https://github.com/Dev1ai/ServiceLink/actions/workflows/ci.yml): lint, API tests, web build, CSP checks
+- [![Web E2E](https://github.com/Dev1ai/ServiceLink/actions/workflows/e2e.yml/badge.svg)](https://github.com/Dev1ai/ServiceLink/actions/workflows/e2e.yml): Playwright suite under strict CSP
+- [![Static Export](https://github.com/Dev1ai/ServiceLink/actions/workflows/static-export.yml/badge.svg)](https://github.com/Dev1ai/ServiceLink/actions/workflows/static-export.yml): build static site (dynamic [id] pages are not exported)
+- [![Release Drafter](https://github.com/Dev1ai/ServiceLink/actions/workflows/release-drafter.yml/badge.svg)](https://github.com/Dev1ai/ServiceLink/actions/workflows/release-drafter.yml)
+- [![Release on Tag](https://github.com/Dev1ai/ServiceLink/actions/workflows/release-on-tag.yml/badge.svg)](https://github.com/Dev1ai/ServiceLink/actions/workflows/release-on-tag.yml)
 
 **Playbook Version:** Canvas “Custom Instructions – Build a Real‑Time Local Services Marketplace App (ChatGPT‑5 Playbook)” — current as of 2025‑08‑30  
 **Release Tag (proposal):** `v0.1.0-m0-bootstrap`
@@ -59,6 +60,13 @@ make compose-obs # compose profile: observability (prometheus, grafana, and db)
   - `make staging-down` to stop
   - `make staging-db-up` to spin up staging with Postgres+Redis included
   - `make staging-db-down` to stop the staging stack with DB
+
+### Static Marketing Site
+- A separate static-only app lives under `apps/marketing`.
+- Export locally:
+  - `pnpm -C apps/marketing build`
+  - Serve `apps/marketing/out/` via any static host/CDN
+- CI workflow "Static Export" builds this site and enforces "no inline styles".
 
 1) **Prereqs**: Node 20+, pnpm 9+, Docker Desktop (or compatible).  
 2) **Install deps**:

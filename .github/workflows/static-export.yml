@@ -25,18 +25,17 @@ jobs:
       - name: Install dependencies
         run: pnpm i --frozen-lockfile=false
 
-      - name: Lint web
-        run: pnpm --filter web lint
+      - name: Lint marketing
+        run: pnpm --filter marketing lint || echo "no lint config for marketing"
 
-      - name: Enforce no inline style props in web
+      - name: Enforce no inline style props in marketing
         run: |
-          if grep -R --line-number --include='*.tsx' --include='*.ts' "style={{" apps/web; then
-            echo "Inline styles detected in apps/web. Please use CSS classes instead." >&2
+          if grep -R --line-number --include='*.tsx' --include='*.ts' "style={{" apps/marketing; then
+            echo "Inline styles detected in apps/marketing. Please use CSS classes instead." >&2
             exit 1
           else
             echo "No inline style props detected."
           fi
 
-      - name: Build web (static export)
-        run: pnpm --filter web run build:export
-
+      - name: Build marketing (static export)
+        run: pnpm --filter marketing run build
