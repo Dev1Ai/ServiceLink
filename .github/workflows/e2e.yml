@@ -1,0 +1,92 @@
+name: Web E2E
+
+on:
+  push:
+    branches: [ main, feature/**, feat/** ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: servicelink
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+          run_install: false
+
+      - name: Install dependencies
+        run: pnpm i --frozen-lockfile=false
+
+      - name: Prepare database (Prisma generate/push/seed)
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/servicelink
+        run: |
+          pnpm db:generate
+          pnpm db:push
+          pnpm db:seed
+
+      - name: Build and start API
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/servicelink
+          JWT_SECRET: test-secret
+          PORT: 3001
+        run: |
+          pnpm --filter api build
+          node apps/api/dist/main.js &
+          echo $! > api-server.pid
+          for i in $(seq 1 60); do
+            if curl -sf http://localhost:3001/health >/dev/null; then
+              echo "API server is up"; break
+            fi
+            sleep 1
+          done
+
+      - name: Install Playwright Browsers
+        run: pnpm --filter web exec playwright install --with-deps
+
+      - name: Run Playwright E2E (strict CSP)
+        working-directory: apps/web
+        env:
+          ENABLE_STRICT_CSP: true
+          E2E_API_BASE: http://localhost:3001
+        run: pnpm test:e2e
+
+      - name: Stop API server
+        if: always()
+        run: |
+          if [ -f api-server.pid ]; then kill $(cat api-server.pid) || true; fi
+

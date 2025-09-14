@@ -2,7 +2,7 @@
 
 SHELL := /bin/sh
 
-.PHONY: install dev api web seed e2e export stack-up stack-down db-up db-down compose-dev compose-db compose-obs
+.PHONY: install dev api web seed e2e export stack-up stack-down db-up db-down compose-dev compose-db compose-obs staging-up staging-down staging-db-up staging-db-down
 
 install:
 	@corepack enable || true
@@ -32,6 +32,12 @@ staging-up:
 
 staging-down:
 	docker compose -f infra/docker-compose.staging.yml down
+
+staging-db-up:
+	docker compose -f infra/docker-compose.staging.db.yml up -d
+
+staging-db-down:
+	docker compose -f infra/docker-compose.staging.db.yml down
 
 # Docker Compose helpers
 stack-up:

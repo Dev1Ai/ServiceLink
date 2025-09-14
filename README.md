@@ -2,6 +2,7 @@
 
 
 [![CI](https://github.com/Dev1ai/ServiceLink/actions/workflows/ci.yml/badge.svg)](https://github.com/Dev1ai/ServiceLink/actions/workflows/ci.yml)
+[![Web E2E](https://github.com/Dev1ai/ServiceLink/actions/workflows/e2e.yml/badge.svg)](https://github.com/Dev1ai/ServiceLink/actions/workflows/e2e.yml)
 [![Static Export](https://github.com/Dev1ai/ServiceLink/actions/workflows/static-export.yml/badge.svg)](https://github.com/Dev1ai/ServiceLink/actions/workflows/static-export.yml)
 [![Release Drafter](https://github.com/Dev1ai/ServiceLink/actions/workflows/release-drafter.yml/badge.svg)](https://github.com/Dev1ai/ServiceLink/actions/workflows/release-drafter.yml)
 [![Release on Tag](https://github.com/Dev1ai/ServiceLink/actions/workflows/release-on-tag.yml/badge.svg)](https://github.com/Dev1ai/ServiceLink/actions/workflows/release-on-tag.yml)
@@ -56,6 +57,8 @@ make compose-obs # compose profile: observability (prometheus, grafana, and db)
 - Build and run production-like containers locally:
   - `make staging-up` (web on :3000, api on :3001, nginx on :8080)
   - `make staging-down` to stop
+  - `make staging-db-up` to spin up staging with Postgres+Redis included
+  - `make staging-db-down` to stop the staging stack with DB
 
 1) **Prereqs**: Node 20+, pnpm 9+, Docker Desktop (or compatible).  
 2) **Install deps**:
