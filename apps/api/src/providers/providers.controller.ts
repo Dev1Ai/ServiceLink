@@ -15,6 +15,13 @@ import { NearProvidersQueryDto, SearchProvidersQueryDto } from './dto/search.dto
 import { Query } from '@nestjs/common';
 import type { AuthedRequest } from '../common/types/request';
 
+/**
+ * Providers Controller
+ * - Search providers by service/category/price/online filters (GET /providers/search)
+ * - Find providers near lat/lng with optional radius and filters (GET /providers/near)
+ * - Provider profile helpers: get own profile, update location
+ * - Rate-limited via Search/Providers role guards; JWT required except where noted
+ */
 @ApiTags('providers')
 @Controller('providers')
 @UseGuards(JwtAuthGuard, RolesGuard)

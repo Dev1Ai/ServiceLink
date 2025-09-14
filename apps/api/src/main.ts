@@ -1,3 +1,9 @@
+/**
+ * API Bootstrap
+ * - Loads env, optional Sentry, sets up Swagger, global validation, and metrics
+ * - Enables CORS (CORS_ORIGIN env or all origins in dev)
+ * - Provides raw body for Stripe webhook verification
+ */
 import 'dotenv/config';
 // Optional Sentry init
 try {

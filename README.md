@@ -9,6 +9,7 @@
 This repo is a **Turborepo** monorepo with:
 - **apps/api**: NestJS API (REST + WebSockets) with health route and Swagger.
 - **apps/web**: Next.js (App Router) admin/marketing skeleton.
+  - See `docs/ARCHITECTURE.md` for a high-level diagram and flows.
 - **apps/mobile**: Expo React Native app (Customer/Provider modes) with availability toggle & map stub.
 - **infra**: Docker Compose (Postgres + Redis), Render/Vercel deploy descriptors.
 - **prisma**: Postgres schema and seed script.

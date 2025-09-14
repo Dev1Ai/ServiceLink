@@ -1,3 +1,12 @@
+/**
+ * CSP Middleware (strict, nonce-free)
+ * - Enabled when ENABLE_STRICT_CSP=true
+ * - Adds a per-request nonce to request headers for potential future use
+ * - Disallows inline styles/scripts by policy; app uses external CSS/JS only
+ * - connect-src:
+ *   - Production: 'self' https: ws: wss:
+ *   - Dev/Test:   adds http: to allow local API under strict CSP
+ */
 import { NextRequest, NextResponse } from 'next/server';
 
 export function middleware(req: NextRequest) {

@@ -1,3 +1,9 @@
+/**
+ * Root Layout (export-safe)
+ * - Avoids request-scoped APIs (e.g., next/headers) so static export works
+ * - Global CSS imported here; no inline styles used anywhere in the app
+ * - CSP is enforced by middleware, not here; inline nonces are not required
+ */
 import { ReactNode } from 'react';
 import './globals.css';
 import { ToastProvider } from './components/Toast';

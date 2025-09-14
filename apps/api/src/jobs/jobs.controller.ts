@@ -10,6 +10,12 @@ import { QuotesService } from './quotes.service';
 import { JobsRoleLimitGuard } from '../common/guards/jobs-role-limit.guard';
 import type { AuthedRequest } from '../common/types/request';
 
+/**
+ * Jobs + Quotes Controller
+ * - Customers: create jobs, list own jobs, accept/revoke quotes, verify completion
+ * - Providers: create quotes for jobs
+ * - AuthZ via JwtAuthGuard + RolesGuard; rate limits via role-specific guards
+ */
 @ApiTags('jobs')
 @Controller('jobs')
 export class JobsController {

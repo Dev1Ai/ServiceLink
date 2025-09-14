@@ -1,4 +1,10 @@
 'use client';
+/**
+ * Realtime Demo Page
+ * - Logs in (JWT in localStorage), connects to Socket.IO namespace at /ws
+ * - Joins a room (e.g., job:<id>), sends/receives chat messages
+ * - Shows presence and applies simple client-side rate-limits UI
+ */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useLocalToken } from '../useLocalToken';
