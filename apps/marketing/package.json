@@ -6,7 +6,8 @@
     "dev": "next dev -p 3100",
     "build": "next build",
     "export": "next build",
-    "start": "next start"
+    "start": "next start",
+    "og": "node scripts/og.mjs"
   },
   "dependencies": {
     "next": "14.2.5",
@@ -17,7 +18,7 @@
     "@types/node": "20.14.9",
     "@types/react": "18.3.3",
     "@types/react-dom": "18.3.0",
-    "typescript": "5.6.2"
+    "typescript": "5.6.2",
+    "@resvg/resvg-js": "^2.6.2"
   }
 }
-
