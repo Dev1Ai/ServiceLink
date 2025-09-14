@@ -97,6 +97,4 @@ export default function QuoteFormPage({ params }: { params: { id: string } }) {
 }
 
 // Allow static export by returning an empty params list. This route is server-only.
-export async function generateStaticParams() {
-  return [] as Array<{ id: string }>;
-}
+// Note: dynamic route is not exported. Use /jobs/quote?id=... for static-friendly.
