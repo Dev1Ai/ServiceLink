@@ -17,6 +17,24 @@ This repo is a **Turborepo** monorepo with:
 
 ## Quickstart
 
+Fast path (3–4 commands):
+```bash
+pnpm i                      # install deps (corepack auto-enables pnpm)
+docker compose -f infra/docker-compose.yml up -d postgres redis
+pnpm db:generate && pnpm db:push && pnpm db:seed
+pnpm dev                    # runs API + Web in parallel
+```
+
+Makefile shortcuts:
+```bash
+make install     # pnpm i
+make db-up       # start Postgres + Redis
+make seed        # prisma generate/push/seed
+make dev         # turbo dev (API + Web)
+make e2e         # run Playwright tests (needs API up at :3001)
+make export      # static export of web (dynamic routes skipped)
+```
+
 1) **Prereqs**: Node 20+, pnpm 9+, Docker Desktop (or compatible).  
 2) **Install deps**:
 ```bash
