@@ -53,3 +53,10 @@ pnpm -C apps/marketing build
   - Edit TITLE/SUBTITLE and run: `TITLE="ServiceLink" SUBTITLE="Trusted local providers" pnpm -C apps/marketing og`
   - This writes `apps/marketing/public/og.svg` and (optionally) `og.png` if PNG converter is available.
 - Update the URLs in `app/layout.tsx` metadata `openGraph.images` and `twitter.images` to point to your deployed domain, e.g. `https://your-domain/og.svg`.
+- ## Analytics (optional)
+- Plausible: set `NEXT_PUBLIC_PLAUSIBLE_DOMAIN` (e.g., `your-domain.com`). The layout injects the external script.
+- Google Analytics: set `NEXT_PUBLIC_GA_ID` (e.g., `G-XXXX`). The layout loads `/ga.js` which bootstraps GA without inline code.
+- Note: If you use AWS CloudFront with strict security headers, allow analytics script hosts (e.g., `plausible.io`, `www.googletagmanager.com`) in CSP.
+
+- ## Contact Form (optional)
+- Set `NEXT_PUBLIC_CONTACT_ENDPOINT` to a form POST endpoint (e.g., Formspree) to enable the on-site form at `/contact`.

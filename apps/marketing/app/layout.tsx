@@ -1,4 +1,5 @@
 import './globals.css';
+import { MarketingAnalytics } from './MarketingAnalytics';
 export const metadata = {
   title: 'ServiceLink — Home Services Marketplace',
   description: 'Find trusted local providers for home services. Simple, fast, reliable.',
@@ -41,6 +42,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </header>
         <main className="site-main" role="main">{children}</main>
         <footer className="site-footer">© {new Date().getFullYear()} ServiceLink</footer>
+        {/* Optional analytics (Plausible/GA) via env vars */}
+        {/* Remember to update CSP if using external analytics on CloudFront */}
+        <MarketingAnalytics />
       </body>
     </html>
   );
