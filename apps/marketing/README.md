@@ -9,6 +9,8 @@ This is a static-only Next.js App Router project intended for the marketing site
 - `app/privacy/page.tsx`: Privacy policy placeholder.
 - `app/contact/page.tsx`: Contact page with email links.
 - `app/faq/page.tsx`: Frequently asked questions.
+- `app/icon.svg`: Site icon (used for favicon/app icon)
+- `app/manifest.ts`: Web app manifest (name/colors/icons)
 
 ## Editing Navigation
 Update the header links in `app/layout.tsx`:
