@@ -9,6 +9,7 @@ import { QuotesRoleLimitGuard } from '../common/guards/quotes-role-limit.guard';
 import { JobsRoleLimitGuard } from '../common/guards/jobs-role-limit.guard';
 import { QuotesService } from './quotes.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import type { AuthedRequest } from '../common/types/request';
 
 describe('JobsController - quotes', () => {
   let controller: JobsController;
@@ -53,7 +54,9 @@ describe('JobsController - quotes', () => {
     controller = moduleRef.get(JobsController);
   });
 
-  const reqWithUser = (sub: string) => ({ user: { sub } });
+  const reqWithUser = (sub: string): AuthedRequest => ({
+    user: { sub },
+  }) as unknown as AuthedRequest;
 
   it('throws Forbidden when provider profile missing', async () => {
     prisma.provider.findUnique.mockResolvedValue(null);
