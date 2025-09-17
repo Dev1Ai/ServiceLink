@@ -21,7 +21,8 @@ export function middleware(req: NextRequest) {
 
   const level = (process.env.CSP_STRICT_LEVEL || 'balanced').toLowerCase();
   const connect = ["'self'", 'https:', 'wss:', 'ws:'];
-  if (process.env.NODE_ENV !== 'production') {
+  const allowHttp = process.env.NODE_ENV !== 'production' || process.env.CSP_ALLOW_HTTP === 'true';
+  if (allowHttp) {
     connect.splice(1, 0, 'http:');
   }
   const scriptSrc =

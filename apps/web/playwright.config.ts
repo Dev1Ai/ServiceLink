@@ -9,10 +9,9 @@ export default defineConfig({
     video: 'retain-on-failure',
   },
   webServer: {
-    command: 'ENABLE_STRICT_CSP=true pnpm start',
+    command: 'ENABLE_STRICT_CSP=true CSP_ALLOW_HTTP=true pnpm start',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
   },
 });
-
