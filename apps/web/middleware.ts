@@ -13,26 +13,21 @@ export function middleware(req: NextRequest) {
   const enableStrict = process.env.ENABLE_STRICT_CSP === 'true';
   if (!enableStrict) return NextResponse.next();
 
-  const nonce = Buffer.from(crypto.getRandomValues(new Uint8Array(16))).toString('base64');
-  const requestHeaders = new Headers(req.headers);
-  requestHeaders.set('x-csp-nonce', nonce);
-
-  const res = NextResponse.next({ request: { headers: requestHeaders } });
-
   const level = (process.env.CSP_STRICT_LEVEL || 'balanced').toLowerCase();
   const connect = ["'self'", 'https:', 'wss:', 'ws:'];
   const allowHttp = process.env.NODE_ENV !== 'production' || process.env.CSP_ALLOW_HTTP === 'true';
   if (allowHttp) {
     connect.splice(1, 0, 'http:');
   }
+  const res = NextResponse.next();
   const scriptSrc =
     level === 'strict'
-      ? `script-src 'self' 'nonce-${nonce}' 'unsafe-inline' blob:`
-      : `script-src 'self' 'nonce-${nonce}' 'unsafe-inline' 'strict-dynamic' https: blob:`;
+      ? `script-src 'self' 'unsafe-inline' 'unsafe-eval' https: ${allowHttp ? 'http: ' : ''}blob:`
+      : `script-src 'self' 'unsafe-inline' 'unsafe-eval' https: ${allowHttp ? 'http: ' : ''}blob:`;
   const styleSrc =
     level === 'strict'
-      ? `style-src 'self' 'nonce-${nonce}' 'unsafe-inline'`
-      : `style-src 'self' 'nonce-${nonce}' 'unsafe-inline' https:`;
+      ? `style-src 'self' 'unsafe-inline' https:`
+      : `style-src 'self' 'unsafe-inline' https:`;
   const csp = [
     `default-src 'self'`,
     scriptSrc,
