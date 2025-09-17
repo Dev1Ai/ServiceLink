@@ -6,10 +6,12 @@ import { AuthController } from './auth.controller';
 import { JwtStrategy } from './jwt.strategy';
 import { PrismaService } from '../prisma/prisma.service';
 import { JwtAuthGuard, RolesGuard } from './jwt.guard';
+import { MetricsModule } from '../metrics/metrics.module';
 
 @Module({
   imports: [
     PassportModule,
+    MetricsModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'changeme',
       signOptions: { expiresIn: '1h' },

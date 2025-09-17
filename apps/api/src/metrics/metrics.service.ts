@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { Counter, Histogram, Registry, collectDefaultMetrics, register } from 'prom-client';
 
+let defaultMetricsRegistered = false;
+
 @Injectable()
 export class MetricsService {
   private readonly reg: Registry;
@@ -14,8 +16,10 @@ export class MetricsService {
 
   constructor() {
     this.reg = register;
-    // ensure default metrics are collected once
-    collectDefaultMetrics();
+    if (!defaultMetricsRegistered) {
+      collectDefaultMetrics();
+      defaultMetricsRegistered = true;
+    }
 
     this.signupCounter = new Counter({
       name: 'auth_signup_total',
