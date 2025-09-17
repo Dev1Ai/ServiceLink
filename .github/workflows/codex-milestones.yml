@@ -24,10 +24,24 @@ jobs:
           node-version: 20
 
       - name: Install Codex CLI
-        run: npm install -g @codex/cli
+        run: |
+          set +e
+          npm info @codex/cli > /dev/null 2>&1
+          if [ $? -eq 0 ]; then
+            echo "Installing @codex/cli from npm registry"
+            npm install -g @codex/cli
+          else
+            echo "@codex/cli not found on npm; skipping install"
+            echo "CODEX_CLI_MISSING=true" >> "$GITHUB_ENV"
+          fi
+          set -e
 
       - name: Run Codex Milestone Update
         run: |
+          if [ "${CODEX_CLI_MISSING:-false}" = "true" ]; then
+            echo "Codex CLI unavailable; skip milestone automation."
+            exit 0
+          fi
           codex context add ./SERVICE\ APP\ CUSTOM\ INSTRUCTIONS.pdf || true
           codex context add ./MILESTONES.md || true
           codex run "
