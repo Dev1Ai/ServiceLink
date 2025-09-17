@@ -21,6 +21,8 @@ This repo is a **Turborepo** monorepo with:
 - **prisma**: Postgres schema and seed script.
 - **packages/schemas**: Shared zod DTOs usable by web/mobile/api.
 
+See [Repository Guidelines](AGENTS.md) for contributor workflows, coding standards, and release expectations.
+
 ## Quickstart
 
 Fast path (3–4 commands):
