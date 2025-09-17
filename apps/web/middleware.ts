@@ -26,12 +26,12 @@ export function middleware(req: NextRequest) {
   }
   const scriptSrc =
     level === 'strict'
-      ? `script-src 'self' 'nonce-${nonce}'`
-      : `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https:`;
+      ? `script-src 'self' 'nonce-${nonce}' 'unsafe-inline'`
+      : `script-src 'self' 'nonce-${nonce}' 'unsafe-inline' 'strict-dynamic' https:`;
   const styleSrc =
     level === 'strict'
-      ? `style-src 'self' 'nonce-${nonce}'`
-      : `style-src 'self' 'nonce-${nonce}' https:`;
+      ? `style-src 'self' 'nonce-${nonce}' 'unsafe-inline'`
+      : `style-src 'self' 'nonce-${nonce}' 'unsafe-inline' https:`;
   const csp = [
     `default-src 'self'`,
     scriptSrc,
