@@ -27,8 +27,8 @@ export function middleware(req: NextRequest) {
   }
   const scriptSrc =
     level === 'strict'
-      ? `script-src 'self' 'nonce-${nonce}' 'unsafe-inline'`
-      : `script-src 'self' 'nonce-${nonce}' 'unsafe-inline' 'strict-dynamic' https:`;
+      ? `script-src 'self' 'nonce-${nonce}' 'unsafe-inline' blob:`
+      : `script-src 'self' 'nonce-${nonce}' 'unsafe-inline' 'strict-dynamic' https: blob:`;
   const styleSrc =
     level === 'strict'
       ? `style-src 'self' 'nonce-${nonce}' 'unsafe-inline'`
