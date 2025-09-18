@@ -18,8 +18,9 @@
     "dev:e2e": "start-server-and-test \"pnpm --filter web dev -p 3000\" http://localhost:3000 \"pnpm exec playwright test\""
   },
   "devDependencies": {
-    "turbo": "latest",
     "prettier": "^3.0.0",
+    "start-server-and-test": "^2.1.1",
+    "turbo": "latest",
     "typescript": "^5.0.0"
   },
   "packageManager": "pnpm@9.0.0"
