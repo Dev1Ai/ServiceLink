@@ -15,7 +15,8 @@
     "db:studio": "pnpm --filter api prisma studio",
     "setup:e2e": "pnpm exec playwright install --with-deps",
     "setup:all": "pnpm install && pnpm --filter web build && pnpm run setup:e2e",
-    "dev:e2e": "start-server-and-test \"pnpm --filter web dev -p 3000\" http://localhost:3000 \"pnpm exec playwright test\""
+    "dev:e2e": "start-server-and-test \"pnpm --filter web dev -p 3000\" http://localhost:3000 \"pnpm exec playwright test\"",
+    "test": "pnpm --filter api test"
   },
   "devDependencies": {
     "prettier": "^3.0.0",
