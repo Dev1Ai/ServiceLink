@@ -10,14 +10,20 @@
  *   - Dev/Test:   adds http: to allow local API when CSP_ALLOW_HTTP=true
  */
 import { NextRequest, NextResponse } from 'next/server';
-import crypto from 'node:crypto';
 
 export function middleware(req: NextRequest) {
   const enableStrict = process.env.ENABLE_STRICT_CSP === 'true';
   if (!enableStrict) return NextResponse.next();
 
   // Generate a unique nonce for this request
-  const nonce = crypto.randomBytes(16).toString('base64');
+  const nonce = (() => {
+    if (typeof crypto.randomUUID === 'function') {
+      return crypto.randomUUID().replace(/-/g, '');
+    }
+    const array = new Uint8Array(16);
+    crypto.getRandomValues(array);
+    return Array.from(array, (b) => b.toString(16).padStart(2, '0')).join('');
+  })();
 
   // Pass nonce to app via request headers
   const requestHeaders = new Headers(req.headers);
