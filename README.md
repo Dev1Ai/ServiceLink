@@ -354,3 +354,9 @@ Grafana Variables
 - The provided dashboard includes variables:
   - `$role` derived from label_values(auth_login_total, role)
   - `$room` derived from label_values(ws_chat_send_total, room)
+
+## Build & Test Status
+
+[![E2E Tests](https://github.com/Dev1ai/ServiceLink/actions/workflows/e2e.yml/badge.svg)](https://github.com/Dev1ai/ServiceLink/actions/workflows/e2e.yml)
+[![Unit Tests & Lint](https://github.com/Dev1ai/ServiceLink/actions/workflows/test.yml/badge.svg)](https://github.com/Dev1ai/ServiceLink/actions/workflows/test.yml)
+

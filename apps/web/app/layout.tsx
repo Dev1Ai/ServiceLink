@@ -1,37 +1,41 @@
 /**
- * Root Layout (export-safe)
- * - Avoids request-scoped APIs (e.g., next/headers) so static export works
- * - Global CSS imported here; no inline styles used anywhere in the app
- * - CSP is enforced by middleware, not here; inline nonces are not required
+ * Root Layout with CSP Nonce
+ * - Reads per-request nonce from `x-nonce` header (set in middleware.ts)
+ * - Applies nonce to Next.js <Script> and <style> tags
+ * - Ensures Webpack dynamic imports inherit the nonce via __webpack_nonce__
+ * - All inline scripts/styles must include {nonce} to pass strict CSP
  */
-import { ReactNode } from 'react';
-import './globals.css';
-import { ToastProvider } from './components/Toast';
-import { CspWatcher } from './components/CspWatcher';
-import { TokenPanel } from './TokenPanel';
+import { headers } from 'next/headers';
+import Script from 'next/script';
+import React from 'react';
 
-export const dynamic = 'force-static';
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  // Retrieve CSP nonce from request headers (forwarded by middleware.ts)
+  const nonce = headers().get('x-nonce') ?? undefined;
 
-export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
+      <head>
+        {/* Propagate nonce to Webpack runtime for dynamic imports */}
+        <Script id="webpack-nonce" nonce={nonce} strategy="beforeInteractive">
+          {`window.__webpack_nonce__ = ${JSON.stringify(nonce)};`}
+        </Script>
+
+        {/* Example of nonced inline <style> if needed */}
+        {/* <style nonce={nonce}>{`:root { --brand-color: #0080ff; }`}</style> */}
+      </head>
       <body>
-        <ToastProvider>
-          <CspWatcher />
-          <div className="navbar">
-            <a href="/">Home</a>
-            <a href="/realtime">Realtime</a>
-            <a href="/jobs">Jobs</a>
-            <a href="/quotes">My Quotes</a>
-            <a href="/assignments">My Assignments</a>
-            <a href="/providers/near">Providers Near</a>
-            <a href="/providers/categories">Providers Categories</a>
-            <a href="/providers/search">Providers Search</a>
-            <a href="/metrics">Metrics</a>
-            <TokenPanel />
-          </div>
-          {children}
-        </ToastProvider>
+        {/* Example inline config script (must carry nonce) */}
+        <Script id="init-config" nonce={nonce} strategy="beforeInteractive">
+          {`window.__APP__ = { env: '${process.env.NODE_ENV}' };`}
+        </Script>
+
+        {children}
+
+        {/* Post-hydration scripts must also include nonce */}
+        <Script id="after-hydration" nonce={nonce} strategy="afterInteractive">
+          {`console.debug('Hydration complete');`}
+        </Script>
       </body>
     </html>
   );

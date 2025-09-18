@@ -1,49 +1,60 @@
 /**
- * CSP Middleware (strict, nonce-free)
+ * CSP Middleware (strict, nonce-based)
  * - Enabled when ENABLE_STRICT_CSP=true
- * - Adds a per-request nonce to request headers for potential future use
- * - Disallows inline styles/scripts by policy; app uses external CSS/JS only
+ * - Generates a per-request nonce for scripts and styles
+ * - Forwards the nonce via `x-nonce` request header so layout.tsx can use it
+ * - Disallows inline scripts/styles unless they carry the nonce
+ * - Uses 'strict-dynamic' so nonced bootstrap scripts can load their children
  * - connect-src:
  *   - Production: 'self' https: ws: wss:
- *   - Dev/Test:   adds http: to allow local API under strict CSP
+ *   - Dev/Test:   adds http: to allow local API when CSP_ALLOW_HTTP=true
  */
 import { NextRequest, NextResponse } from 'next/server';
+import crypto from 'node:crypto';
 
 export function middleware(req: NextRequest) {
   const enableStrict = process.env.ENABLE_STRICT_CSP === 'true';
   if (!enableStrict) return NextResponse.next();
 
-  const level = (process.env.CSP_STRICT_LEVEL || 'balanced').toLowerCase();
-  const connect = ["'self'", 'https:', 'wss:', 'ws:'];
-  const allowHttp = process.env.NODE_ENV !== 'production' || process.env.CSP_ALLOW_HTTP === 'true';
-  if (allowHttp) {
-    connect.splice(1, 0, 'http:');
-  }
-  const res = NextResponse.next();
-  const scriptSrc =
-    level === 'strict'
-      ? `script-src 'self' 'unsafe-inline' 'unsafe-eval' https: ${allowHttp ? 'http: ' : ''}blob:`
-      : `script-src 'self' 'unsafe-inline' 'unsafe-eval' https: ${allowHttp ? 'http: ' : ''}blob:`;
-  const styleSrc =
-    level === 'strict'
-      ? `style-src 'self' 'unsafe-inline' https:`
-      : `style-src 'self' 'unsafe-inline' https:`;
+  // Generate a unique nonce for this request
+  const nonce = crypto.randomBytes(16).toString('base64');
+
+  // Pass nonce to app via request headers
+  const requestHeaders = new Headers(req.headers);
+  requestHeaders.set('x-nonce', nonce);
+
+  const res = NextResponse.next({ request: { headers: requestHeaders } });
+
+  const allowHttp =
+    process.env.NODE_ENV !== 'production' || process.env.CSP_ALLOW_HTTP === 'true';
+  const http = allowHttp ? ' http:' : '';
+  const https = ' https:';
+
+  // Strict, nonce-based CSP
   const csp = [
     `default-src 'self'`,
-    scriptSrc,
-    styleSrc,
-    `img-src 'self' data: blob: https:`,
-    `font-src 'self' data: https:`,
-    `connect-src ${connect.join(' ')}`,
+    // Only nonced scripts are allowed; 'strict-dynamic' lets them load dependencies
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${https}${http} blob:`,
+    // Styles also require nonce
+    `style-src 'self' 'nonce-${nonce}'${https}`,
+    // Allow images, fonts, connections
+    `img-src 'self' data: blob:${https}${http}`,
+    `font-src 'self' data:${https}`,
+    `connect-src 'self'${https}${http} ws: wss:`,
+    // Frame, form, and object restrictions
     `frame-ancestors 'self'`,
     `base-uri 'self'`,
     `object-src 'none'`,
-  ].filter(Boolean).join('; ');
+    // Upgrade mixed content
+    `upgrade-insecure-requests`,
+  ].join('; ');
 
+  // Attach CSP header
   res.headers.set('Content-Security-Policy', csp);
   return res;
 }
 
+// Apply CSP middleware to all routes except Next.js internals
 export const config = {
   matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 };

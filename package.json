@@ -12,7 +12,10 @@
     "db:seed": "pnpm --filter api exec prisma db seed --schema=prisma/schema.prisma",
     "prisma:all": "pnpm --filter api prisma",
     "db:reset": "pnpm --filter api prisma migrate reset --force --skip-generate --skip-seed && pnpm db:seed",
-    "db:studio": "pnpm --filter api prisma studio"
+    "db:studio": "pnpm --filter api prisma studio",
+    "setup:e2e": "pnpm exec playwright install --with-deps",
+    "setup:all": "pnpm install && pnpm --filter web build && pnpm run setup:e2e",
+    "dev:e2e": "start-server-and-test \"pnpm --filter web dev -p 3000\" http://localhost:3000 \"pnpm exec playwright test\""
   },
   "devDependencies": {
     "turbo": "latest",

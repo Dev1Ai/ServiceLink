@@ -1,4 +1,4 @@
-name: E2E Tests
+name: Unit Tests & Lint
 
 on:
   push:
@@ -6,20 +6,25 @@ on:
   pull_request:
 
 jobs:
-  e2e:
+  test:
     runs-on: ubuntu-latest
+
     steps:
+      # Checkout repo
       - uses: actions/checkout@v4
+
+      # Setup Node with pnpm cache
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'pnpm'
       - run: corepack enable
+
+      # Install dependencies
       - run: pnpm install
-      - run: pnpm --filter web build
-      - run: pnpm exec playwright install --with-deps
-      - run: >
-          pnpm exec start-server-and-test
-          "pnpm --filter web start -p 3000"
-          http://localhost:3000
-          "pnpm exec playwright test"
+
+      # Run lint
+      - run: pnpm lint
+
+      # Run unit tests
+      - run: pnpm test
