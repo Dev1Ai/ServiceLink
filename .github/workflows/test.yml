@@ -13,12 +13,15 @@ jobs:
       # Checkout repo
       - uses: actions/checkout@v4
 
+      - name: Enable Corepack (pnpm)
+        run: corepack enable pnpm
+
       # Setup Node with pnpm cache
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'pnpm'
-      - run: corepack enable
+          cache-dependency-path: pnpm-workspace.yaml
 
       # Install dependencies
       - run: pnpm install
