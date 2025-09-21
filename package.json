@@ -17,8 +17,8 @@
     "setup:all": "pnpm install && pnpm --filter web build && pnpm run setup:e2e",
     "dev:e2e": "start-server-and-test \"pnpm --filter web dev -p 3000\" http://localhost:3000 \"pnpm exec playwright test\"",
     "test": "pnpm --filter api test",
-    "dev:mobile-polished": "cd apps/mobile-uber-polished && expo start",
-    "build:mobile-polished": "cd apps/mobile-uber-polished && expo build",
+    "dev:mobile-polished": "cd apps/mobile-uber-polished && pnpm expo start",
+    "build:mobile-polished": "cd apps/mobile-uber-polished && pnpm expo build",
     "test:mobile-polished": "cd apps/mobile-uber-polished && pnpm exec jest"
   },
   "devDependencies": {
