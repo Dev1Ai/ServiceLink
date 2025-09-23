@@ -360,3 +360,15 @@ Grafana Variables
 [![E2E Tests](https://github.com/Dev1ai/ServiceLink/actions/workflows/e2e.yml/badge.svg)](https://github.com/Dev1ai/ServiceLink/actions/workflows/e2e.yml)
 [![Unit Tests & Lint](https://github.com/Dev1ai/ServiceLink/actions/workflows/test.yml/badge.svg)](https://github.com/Dev1ai/ServiceLink/actions/workflows/test.yml)
 
+## CI Status
+
+![CI](https://github.com//actions/workflows/ci.yml/badge.svg)
+
+
+## CI Status
+
+[![CI](https://github.com/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/badge.svg)](https://github.com/${GITHUB_REPOSITORY}/actions/workflows/ci.yml)
+
+
+## Documentation
+- [Custom Instructions Playbook](docs/PLAYBOOK.md)
