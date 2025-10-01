@@ -16,6 +16,14 @@ jobs:
   auto-label:
     runs-on: ubuntu-latest
     steps:
+      - name: Dump token permissions
+        run: |
+          echo "Token permissions:" > perms.txt
+          gh auth status 2>>perms.txt || true
+          cat perms.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Auto-apply milestone labels
         uses: actions-ecosystem/action-add-labels@v1
         with:
