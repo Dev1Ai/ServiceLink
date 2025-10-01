@@ -1,0 +1,49 @@
+name: Project Automation
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  projects: write
+
+on:
+  issues:
+    types: [opened, labeled, reopened, closed]
+  pull_request:
+    types: [opened, labeled, reopened, synchronize, closed]
+
+jobs:
+  auto-label:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dump token permissions
+        run: |
+          echo "Token permissions:" > perms.txt
+          gh auth status 2>>perms.txt || true
+          cat perms.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Auto-apply milestone labels
+        uses: actions-ecosystem/action-add-labels@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          labels: |
+            ${{ startsWith(github.head_ref, 'm0') || contains(github.head_ref, 'bootstrap') && 'm0' || '' }}
+            ${{ startsWith(github.head_ref, 'm1') || contains(github.head_ref, 'auth') && 'm1' || '' }}
+            ${{ startsWith(github.head_ref, 'm2') || contains(github.head_ref, 'categories') && 'm2' || '' }}
+            ${{ startsWith(github.head_ref, 'm3') || contains(github.head_ref, 'availability') && 'm3' || '' }}
+            ${{ startsWith(github.head_ref, 'm4') || contains(github.head_ref, 'quotes') && 'm4' || '' }}
+            ${{ startsWith(github.head_ref, 'm5') || contains(github.head_ref, 'payments') && 'm5' || '' }}
+            ${{ startsWith(github.head_ref, 'm6') || contains(github.head_ref, 'llm') && 'm6' || '' }}
+            ${{ startsWith(github.head_ref, 'm7') || contains(github.head_ref, 'beta') && 'm7' || '' }}
+
+  add-to-project:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Add item to Project Board
+        uses: actions/add-to-project@v0.5.0
+        with:
+          project-url: https://github.com/orgs/${{ github.repository_owner }}/projects/1
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          labeled: m0,m1,m2,m3,m4,m5,m6,m7
