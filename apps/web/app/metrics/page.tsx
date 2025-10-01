@@ -1,10 +1,11 @@
 'use client';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
 
 type Sample = { name: string; labels: Record<string, string>; value: number };
+type FulfillmentSummary = { awaitingSchedule: number; scheduled: number; reminderOverdue: number; payoutPending: number };
 
 function parseMetrics(text: string): Sample[] {
   const samples: Sample[] = [];
@@ -35,6 +36,8 @@ const INTEREST = [
   'ws_typing_total',
   'ws_chat_send_total',
   'payment_initiate_total',
+  'reminder_sent_total',
+  'reminder_failed_total',
 ] as const;
 type InterestName = typeof INTEREST[number];
 
@@ -42,12 +45,13 @@ function isInterestName(x: string): x is InterestName {
   return (INTEREST as readonly string[]).includes(x);
 }
 
-export default function MetricsPage() {
+function MetricsPageContent() {
   const router = useRouter();
   const pathname = usePathname();
   const search = useSearchParams();
   const [raw, setRaw] = useState<string>('');
   const [status, setStatus] = useState<string>('');
+  const [fulfillment, setFulfillment] = useState<FulfillmentSummary | null>(null);
   const [series, setSeries] = useState<Record<InterestName, Array<{ t: number; v: number }>> | null>(null);
   const [showNames, setShowNames] = useState<Record<InterestName, boolean>>(() => {
     try {
@@ -85,13 +89,26 @@ export default function MetricsPage() {
   const load = useCallback(async () => {
     setStatus('Loading...');
     try {
-      const res = await fetch(`${API}/metrics`, { cache: 'no-store' });
-      const text = await res.text();
+      const [metricsRes, summaryRes] = await Promise.all([
+        fetch(`${API}/metrics`, { cache: 'no-store' }),
+        fetch(`${API}/metrics/fulfillment-summary`, { cache: 'no-store' }),
+      ]);
+      const text = await metricsRes.text();
       setRaw(text);
-      setStatus(res.ok ? 'OK' : `Error ${res.status}`);
       updateSeriesFromText(text);
+      if (summaryRes.ok) {
+        const summary = (await summaryRes.json()) as FulfillmentSummary;
+        setFulfillment(summary);
+      } else {
+        setFulfillment(null);
+      }
+      const statusParts: string[] = [];
+      statusParts.push(metricsRes.ok ? 'metrics ok' : `metrics ${metricsRes.status}`);
+      statusParts.push(summaryRes.ok ? 'summary ok' : `summary ${summaryRes.status}`);
+      setStatus(statusParts.join(' / '));
     } catch {
       setStatus('Network error');
+      setFulfillment(null);
     }
   }, [updateSeriesFromText]);
 
@@ -146,12 +163,28 @@ export default function MetricsPage() {
 
   const parsed = useMemo(() => parseMetrics(raw), [raw]);
   const filtered = useMemo(() => parsed.filter((s) => isInterestName(s.name) && Object.keys(s.labels).length <= 2), [parsed]);
+  const summaryItems = useMemo(() => {
+    if (!fulfillment) return [];
+    return [
+      { key: 'awaiting', label: 'Awaiting Schedule', value: fulfillment.awaitingSchedule },
+      { key: 'scheduled', label: 'Scheduled', value: fulfillment.scheduled },
+      { key: 'overdue', label: 'Reminder Overdue', value: fulfillment.reminderOverdue },
+      { key: 'payout', label: 'Payout Pending', value: fulfillment.payoutPending },
+    ];
+  }, [fulfillment]);
 
   return (
     <div className="container font-sans">
       <h2 className="flex items-center gap-12">
         Metrics <span className="font-12 text-muted">{status}</span>
       </h2>
+      {summaryItems.length > 0 && (
+        <div className="grid gap-12 mt-12 summary-grid">
+          {summaryItems.map((item) => (
+            <SummaryCard key={item.key} label={item.label} value={item.value} />
+          ))}
+        </div>
+      )}
       {/* Simple canvas charts */}
       <div className="controls">
         <label><input type="checkbox" checked={asRate} onChange={(e) => setAsRate(e.target.checked)} /> show rate (per sec)</label>
@@ -229,6 +262,15 @@ export default function MetricsPage() {
   );
 }
 
+function SummaryCard({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="card">
+      <div className="font-12 text-muted">{label}</div>
+      <div className="font-28 font-semibold">{value.toLocaleString()}</div>
+    </div>
+  );
+}
+
 function MiniChart({ title, data }: { title: string; data: Array<{ t: number; v: number }> }) {
   const canvasRef = useState<HTMLCanvasElement | null>(null)[0] as any;
   const [ref, setRef] = useState<HTMLCanvasElement | null>(null);
@@ -274,5 +316,14 @@ function MiniChart({ title, data }: { title: string; data: Array<{ t: number; v:
     <div className="card-tight">
       <canvas ref={setRef as any} width={360} height={120} />
     </div>
+  );
+}
+
+
+export default function MetricsPage() {
+  return (
+    <Suspense fallback={<div className="container">Loading metrics...</div>}>
+      <MetricsPageContent />
+    </Suspense>
   );
 }

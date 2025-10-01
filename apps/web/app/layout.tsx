@@ -1,41 +1,51 @@
 /**
  * Root Layout with CSP Nonce
- * - Reads per-request nonce from `x-nonce` header (set in middleware.ts)
- * - Applies nonce to Next.js <Script> and <style> tags
- * - Ensures Webpack dynamic imports inherit the nonce via __webpack_nonce__
- * - All inline scripts/styles must include {nonce} to pass strict CSP
+ * - Generates nonce from middleware headers when available
+ * - Skips nonce and inline bootstrap scripts during static export builds
+ * - Wraps children with shared client providers (toast, CSP watcher)
  */
-import { headers } from 'next/headers';
-import Script from 'next/script';
+import './globals.css';
 import React from 'react';
+import Script from 'next/script';
+import Providers from './providers';
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
-  // Retrieve CSP nonce from request headers (forwarded by middleware.ts)
-  const nonce = headers().get('x-nonce') ?? undefined;
+const isStaticExport = process.env.NEXT_OUTPUT === 'export';
+
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  let nonce: string | undefined;
+
+  if (!isStaticExport) {
+    try {
+      const { headers } = await import('next/headers');
+      nonce = headers().get('x-nonce') ?? undefined;
+    } catch {
+      nonce = undefined;
+    }
+  }
 
   return (
     <html lang="en">
       <head>
-        {/* Propagate nonce to Webpack runtime for dynamic imports */}
-        <Script id="webpack-nonce" nonce={nonce} strategy="beforeInteractive">
-          {`window.__webpack_nonce__ = ${JSON.stringify(nonce)};`}
-        </Script>
-
-        {/* Example of nonced inline <style> if needed */}
-        {/* <style nonce={nonce}>{`:root { --brand-color: #0080ff; }`}</style> */}
+        {!isStaticExport && (
+          <Script id="webpack-nonce" nonce={nonce} strategy="beforeInteractive">
+            {`window.__webpack_nonce__ = ${JSON.stringify(nonce)};`}
+          </Script>
+        )}
       </head>
       <body>
-        {/* Example inline config script (must carry nonce) */}
-        <Script id="init-config" nonce={nonce} strategy="beforeInteractive">
-          {`window.__APP__ = { env: '${process.env.NODE_ENV}' };`}
-        </Script>
+        {!isStaticExport && (
+          <Script id="init-config" nonce={nonce} strategy="beforeInteractive">
+            {`window.__APP__ = { env: '${process.env.NODE_ENV}' };`}
+          </Script>
+        )}
 
-        {children}
+        <Providers>{children}</Providers>
 
-        {/* Post-hydration scripts must also include nonce */}
-        <Script id="after-hydration" nonce={nonce} strategy="afterInteractive">
-          {`console.debug('Hydration complete');`}
-        </Script>
+        {!isStaticExport && (
+          <Script id="after-hydration" nonce={nonce} strategy="afterInteractive">
+            {`console.debug('Hydration complete');`}
+          </Script>
+        )}
       </body>
     </html>
   );

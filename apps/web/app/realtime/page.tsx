@@ -5,13 +5,13 @@
  * - Joins a room (e.g., job:<id>), sends/receives chat messages
  * - Shows presence and applies simple client-side rate-limits UI
  */
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useLocalToken } from '../useLocalToken';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '../components/Toast';
 
-export default function RealtimePage() {
+function RealtimePageContent() {
   const [email, setEmail] = useState('provider@example.com');
   const [password, setPassword] = useState('password123');
   const [nameField, setNameField] = useState('Provider User');
@@ -278,5 +278,14 @@ export default function RealtimePage() {
         })}
       </div>
     </div>
+  );
+}
+
+
+export default function RealtimePage() {
+  return (
+    <Suspense fallback={<div className="container">Loading realtime console...</div>}>
+      <RealtimePageContent />
+    </Suspense>
   );
 }

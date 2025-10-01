@@ -1,13 +1,13 @@
 'use client';
 import Link from 'next/link';
-import { useCallback, useEffect, useState } from 'react';
+import { Suspense, useCallback, useEffect, useState } from 'react';
 import { useLocalToken } from '../../useLocalToken';
 import { useToast } from '../../components/Toast';
 import { useSearchParams } from 'next/navigation';
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
 
-export default function QuotesStaticPage() {
+function QuotesStaticContent() {
   const search = useSearchParams();
   const id = search.get('id') || '';
   const [token, setToken] = useLocalToken();
@@ -165,3 +165,10 @@ export default function QuotesStaticPage() {
   );
 }
 
+export default function QuotesStaticPage() {
+  return (
+    <Suspense fallback={<div className="container">Loading quotes...</div>}>
+      <QuotesStaticContent />
+    </Suspense>
+  );
+}

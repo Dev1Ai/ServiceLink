@@ -1,12 +1,14 @@
 'use client';
 import Link from 'next/link';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocalToken } from '../useLocalToken';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
+const isStaticExport = process.env.NEXT_OUTPUT === 'export';
+
 const API = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
 
-export default function JobsPage() {
+function JobsPageContent() {
   const [token, setToken] = useLocalToken();
   const [items, setItems] = useState<any[]>([]);
   const [status, setStatus] = useState('');
@@ -16,7 +18,6 @@ export default function JobsPage() {
   const initialAssigned = search.get('assigned');
   const [onlyAssigned, setOnlyAssigned] = useState<boolean>(initialAssigned === '1');
 
-  // Load saved filter if no URL param
   useEffect(() => {
     if (initialAssigned) return;
     try {
@@ -38,13 +39,11 @@ export default function JobsPage() {
     if (token) load();
   }, [token, load]);
 
-  // Filter client-side
   const filtered = useMemo(() => {
     if (!onlyAssigned) return items;
     return items.filter((j: any) => !!j.assignment);
   }, [items, onlyAssigned]);
 
-  // Sync filter to URL
   useEffect(() => {
     try {
       const params = new URLSearchParams(search.toString());
@@ -83,6 +82,10 @@ export default function JobsPage() {
           const assigned = !!j.assignment;
           const status = j.assignment?.status;
           const prov = j.assignment?.provider?.user;
+          const quotesStaticHref = `/jobs/quotes?id=${encodeURIComponent(j.id)}`;
+          const quoteStaticHref = `/jobs/quote?id=${encodeURIComponent(j.id)}`;
+          const quotesHref = isStaticExport ? quotesStaticHref : `/jobs/${j.id}/quotes`;
+          const quoteHref = isStaticExport ? quoteStaticHref : `/jobs/${j.id}/quote`;
           return (
             <div key={j.id} className={`card ${assigned ? 'bg-assigned' : ''}`}>
               <div className="flex justify-between items-center">
@@ -102,10 +105,10 @@ export default function JobsPage() {
               )}
               <div className="font-12 text-faint mt-4">{new Date(j.createdAt).toLocaleString()}</div>
               <div className="mt-8 flex gap-8 flex-wrap">
-                <Link href={`/jobs/${j.id}/quotes`}>View quotes</Link>
-                <Link href={`/jobs/quotes?id=${encodeURIComponent(j.id)}`}>Quotes (static)</Link>
-                <Link href={`/jobs/${j.id}/quote`}>Provider quote form</Link>
-                <Link href={`/jobs/quote?id=${encodeURIComponent(j.id)}`}>Quote (static)</Link>
+                <Link href={quotesHref}>View quotes</Link>
+                {!isStaticExport && <Link href={quotesStaticHref}>Quotes (static)</Link>}
+                <Link href={quoteHref}>Provider quote form</Link>
+                {!isStaticExport && <Link href={quoteStaticHref}>Quote (static)</Link>}
                 {j.key && <Link href={`/realtime?room=${encodeURIComponent('job:' + j.key)}`}>Open chat</Link>}
                 {assigned && status !== 'customer_verified' && (
                   <button onClick={() => verify(j.id)} disabled={busy === j.id}>
@@ -118,5 +121,13 @@ export default function JobsPage() {
         })}
       </div>
     </div>
+  );
+}
+
+export default function JobsPage() {
+  return (
+    <Suspense fallback={<div className="container">Loading jobs...</div>}>
+      <JobsPageContent />
+    </Suspense>
   );
 }

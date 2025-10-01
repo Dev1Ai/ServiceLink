@@ -1,20 +1,19 @@
 'use client';
-import { Suspense, useEffect, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { useLocalToken } from '../../useLocalToken';
-import { useToast } from '../../components/Toast';
+import { useEffect, useState } from 'react';
+import { useLocalToken } from '../../../useLocalToken';
+import { useToast } from '../../../components/Toast';
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
 
-function QuoteFormStaticContent() {
-  const search = useSearchParams();
-  const id = search.get('id') || '';
+export default function QuoteFormClient({ params }: { params: { id: string } }) {
+  const { id } = params;
+  const isPlaceholder = id === 'example-static';
   const [token, setToken] = useLocalToken();
   const [total, setTotal] = useState('150');
   const [result, setResult] = useState<any>(null);
   const [cooldownUntil, setCooldownUntil] = useState<number | null>(null);
   const [, forceTick] = useState(0);
-  const [inlineMsg, setInlineMsg] = useState<string | null>(null);
+  const [inlineMsg, setInlineMsg] = useState<string | null>(isPlaceholder ? 'Static export placeholder — use /jobs/quote?id=YOUR_JOB_ID when running from static hosting.' : null);
   const { push } = useToast();
 
   useEffect(() => {
@@ -23,26 +22,29 @@ function QuoteFormStaticContent() {
   }, []);
 
   useEffect(() => {
+    if (isPlaceholder) return;
     try {
       const raw = localStorage.getItem('quote:submitCooldownUntil');
       const n = raw ? Number(raw) : 0;
       if (n > Date.now()) setCooldownUntil(n);
     } catch {}
-  }, []);
+  }, [isPlaceholder]);
 
   useEffect(() => {
+    if (isPlaceholder) return;
     try {
       if (cooldownUntil) localStorage.setItem('quote:submitCooldownUntil', String(cooldownUntil));
       else localStorage.removeItem('quote:submitCooldownUntil');
     } catch {}
-  }, [cooldownUntil]);
+  }, [cooldownUntil, isPlaceholder]);
 
   const cdLeft = cooldownUntil ? Math.max(0, Math.ceil((cooldownUntil - Date.now()) / 1000)) : 0;
-  const disabled = cdLeft > 0;
+  const disabled = cdLeft > 0 || isPlaceholder;
 
   const submit = async () => {
-    if (!id) {
-      setInlineMsg('Missing job id');
+    if (isPlaceholder) {
+      setResult({ ok: false, message: 'Placeholder page in static export. Use /jobs/quote?id=YOUR_JOB_ID.' });
+      setInlineMsg('Static export placeholder — use /jobs/quote?id=YOUR_JOB_ID when hosting the export.');
       return;
     }
     if (disabled) {
@@ -53,7 +55,7 @@ function QuoteFormStaticContent() {
     }
     setResult('Submitting...');
     setInlineMsg(null);
-    const res = await fetch(`${API}/jobs/${encodeURIComponent(id)}/quotes`, {
+    const res = await fetch(`${API}/jobs/${id}/quotes`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({ total: Number(total) }),
@@ -84,28 +86,20 @@ function QuoteFormStaticContent() {
 
   return (
     <div className="container">
-      <h2>Provider: Quote Job (static) {id || '(no id)'}</h2>
+      <h2>Provider: Quote Job {isPlaceholder ? '(static placeholder)' : id}</h2>
       <div className="grid gap-8 max-w-420">
-        <input value={token} onChange={(e) => setToken(e.target.value)} placeholder="paste PROVIDER JWT here" />
-        <input value={total} onChange={(e) => setTotal(e.target.value)} placeholder="total (USD cents)" />
+        <input value={token} onChange={(e) => setToken(e.target.value)} placeholder="paste PROVIDER JWT here" disabled={isPlaceholder} />
+        <input value={total} onChange={(e) => setTotal(e.target.value)} placeholder="total (USD cents)" disabled={isPlaceholder} />
         {inlineMsg && (
           <div className="alert alert-error">
             {inlineMsg}
           </div>
         )}
-        <button onClick={submit} disabled={disabled} title={disabled ? `Submit cooldown: ${cdLeft}s` : 'Submit quote'}>
-          {disabled ? `Submit Quote (cd ${cdLeft}s)` : 'Submit Quote'}
+        <button onClick={submit} disabled={disabled} title={disabled ? (isPlaceholder ? 'Unavailable in static export' : `Submit cooldown: ${cdLeft}s`) : 'Submit quote'}>
+          {isPlaceholder ? 'Unavailable in static export' : disabled ? `Submit Quote (cd ${cdLeft}s)` : 'Submit Quote'}
         </button>
       </div>
       <pre className="pre mt-16">{JSON.stringify(result, null, 2)}</pre>
     </div>
-  );
-}
-
-export default function QuoteFormStaticPage() {
-  return (
-    <Suspense fallback={<div className="container">Preparing quote form...</div>}>
-      <QuoteFormStaticContent />
-    </Suspense>
   );
 }

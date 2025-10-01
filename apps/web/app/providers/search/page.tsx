@@ -44,7 +44,6 @@ export default function ProvidersSearchPage() {
     if (lng) params.set('lng', lng);
     if (radiusKm) params.set('radiusKm', radiusKm);
     if (service) params.set('service', service);
-    if (service) params.set('service', service);
     if (category) params.set('category', category);
     const res = await fetch(`${API}/providers/search?${params.toString()}`);
     const data = await res.json().catch(() => ({}));
@@ -53,6 +52,13 @@ export default function ProvidersSearchPage() {
     setHasNext(Boolean(data && data.hasNext));
     setTotal(Number((data && data.total) || arr.length || 0));
     setStatus(res.ok ? 'OK' : `Error ${res.status}`);
+    if (typeof window !== 'undefined') {
+      const queryString = params.toString();
+      const nextUrl = queryString ? `/providers/search?${queryString}` : '/providers/search';
+      if (window.location.pathname + window.location.search !== nextUrl) {
+        window.history.replaceState(null, '', nextUrl);
+      }
+    }
   }, [q, onlineOnly, minPrice, maxPrice, page, take, sort, order, lat, lng, radiusKm, service, category]);
 
   const geo = () => {
@@ -81,6 +87,24 @@ export default function ProvidersSearchPage() {
         const res = await fetch(`${API}/providers/services`);
         const data = await res.json();
         if (Array.isArray(data)) setServices(data);
+      } catch {}
+    })();
+    (async () => {
+      try {
+        const res = await fetch(`${API}/providers/categories`);
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          const flatten = (nodes: any[], prefix = ''): Array<{ slug: string; label: string }> => {
+            const out: Array<{ slug: string; label: string }> = [];
+            for (const n of nodes) {
+              const label = prefix ? `${prefix} › ${n.name}` : n.name;
+              out.push({ slug: n.slug, label });
+              if (Array.isArray(n.children) && n.children.length) out.push(...flatten(n.children, label));
+            }
+            return out;
+          };
+          setCategories(flatten(data));
+        }
       } catch {}
     })();
   }, []);
