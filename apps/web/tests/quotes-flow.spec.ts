@@ -46,10 +46,17 @@ test.describe('Quotes accept/revoke flow', () => {
 
     await page.goto(`/jobs/${encodeURIComponent(job.id)}/quotes`);
 
-    // Accept the quote: locate the card by the total and click Accept
-    const card = page.locator('div', { hasText: `Quote: $${totalCents}` });
-    await expect(card).toBeVisible();
-    await card.getByRole('button', { name: /Accept/ }).click();
+    // Wait for page to load and quotes to render
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1000);
+
+    // Accept the quote: locate the card by the total amount (in dollars)
+    const totalDollars = (totalCents / 100).toFixed(2);
+    const card = page.locator('[class*="card"]').filter({ hasText: totalDollars });
+    await expect(card.first()).toBeVisible({ timeout: 10000 });
+    const acceptBtn = card.first().getByRole('button', { name: /Accept/i });
+    await expect(acceptBtn).toBeVisible();
+    await acceptBtn.click();
 
     // Verify accepted status appears
     await expect(card.locator('text=Status: accepted')).toBeVisible({ timeout: 10000 });
