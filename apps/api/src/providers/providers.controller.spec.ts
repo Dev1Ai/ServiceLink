@@ -12,9 +12,12 @@ describe('ProvidersController (unit)', () => {
     service: { groupBy: jest.fn() },
     category: { findMany: jest.fn() },
   };
+  const assignments = {
+    completeAssignmentAsProvider: jest.fn(),
+  };
 
   beforeEach(() => {
-    controller = new ProvidersController({} as any as ProvidersService, prisma);
+    controller = new ProvidersController({} as any as ProvidersService, prisma, assignments as any);
     jest.clearAllMocks();
   });
 

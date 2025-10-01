@@ -8,6 +8,17 @@ export class JwtAuthGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const req = context.switchToHttp().getRequest();
+    const path = (req?.path || req?.url || '').split('?')[0];
+    const method = (req?.method || 'GET').toUpperCase();
+    const publicGetPaths = new Set([
+      '/providers/search',
+      '/providers/near',
+      '/providers/services',
+      '/providers/categories',
+    ]);
+    if (method === 'GET' && publicGetPaths.has(path)) {
+      return true;
+    }
     const auth = req.headers['authorization'] as string | undefined;
     if (!auth || !auth.startsWith('Bearer ')) throw new UnauthorizedException('Missing token');
     const token = auth.slice('Bearer '.length);

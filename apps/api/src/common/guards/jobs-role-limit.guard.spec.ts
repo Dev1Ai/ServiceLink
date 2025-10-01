@@ -4,14 +4,21 @@ import { JobsRoleLimitGuard } from './jobs-role-limit.guard';
 import { ExecutionContext, HttpException } from '@nestjs/common';
 
 class MemoryStorage {
-  private store = new Map<string, number[]>();
-  async getRecord(key: string): Promise<number[]> {
-    return this.store.get(key) || [];
-  }
-  async addRecord(key: string, _ttl: number): Promise<void> {
-    const arr = this.store.get(key) || [];
-    arr.push(Date.now());
-    this.store.set(key, arr);
+  private store = new Map<string, { totalHits: number; expiresAt: number }>();
+  async increment(key: string, ttlMs: number): Promise<{ totalHits: number; timeToExpire: number }> {
+    const now = Date.now();
+    const existing = this.store.get(key);
+    if (!existing || existing.expiresAt <= now) {
+      const expiresAt = now + ttlMs;
+      this.store.set(key, { totalHits: 1, expiresAt });
+      return { totalHits: 1, timeToExpire: Math.ceil(ttlMs / 1000) };
+    }
+    existing.totalHits += 1;
+    this.store.set(key, existing);
+    return {
+      totalHits: existing.totalHits,
+      timeToExpire: Math.max(0, Math.ceil((existing.expiresAt - now) / 1000)),
+    };
   }
 }
 

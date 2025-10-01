@@ -14,6 +14,7 @@ import type { Prisma } from '@prisma/client';
 import { NearProvidersQueryDto, SearchProvidersQueryDto } from './dto/search.dto';
 import { Query } from '@nestjs/common';
 import type { AuthedRequest } from '../common/types/request';
+import { AssignmentsService } from '../jobs/assignments.service';
 
 /**
  * Providers Controller
@@ -24,10 +25,12 @@ import type { AuthedRequest } from '../common/types/request';
  */
 @ApiTags('providers')
 @Controller('providers')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@ApiBearerAuth('bearer')
 export class ProvidersController {
-  constructor(private readonly providers: ProvidersService, private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly providers: ProvidersService,
+    private readonly prisma: PrismaService,
+    private readonly assignments: AssignmentsService,
+  ) {}
 
   @Post('onboarding')
   @Roles('PROVIDER')
@@ -43,6 +46,8 @@ export class ProvidersController {
 
   @Get('me')
   @Roles('PROVIDER')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth('bearer')
   @ApiOperation({ summary: 'Get current provider profile' })
   @ApiOkResponse({ type: UserDetailDto })
   @ApiUnauthorizedResponse({ type: ErrorDto })
@@ -79,50 +84,45 @@ export class ProvidersController {
     const page = dto.page ?? 1;
     const take = dto.take ?? 50;
     // const skip = (page - 1) * take; // not used; results are post-filtered client-side
-    const where: Prisma.ProviderWhereInput = {
-      AND: [
-        q ? { services: { some: { name: { contains: q, mode: 'insensitive' } } } } : {},
-        onlineOnly ? { online: true } : {},
-        isFinite(minPrice) ? { services: { some: { price: { gte: Number(minPrice) } } } } : {},
-        isFinite(maxPrice) ? { services: { some: { price: { lte: Number(maxPrice) } } } } : {},
-      ],
-    };
+    const filters: Prisma.ProviderWhereInput[] = [];
+    if (q) filters.push({ services: { some: { name: { contains: q, mode: 'insensitive' } } } });
+    if (onlineOnly) filters.push({ online: true });
+    if (isFinite(minPrice)) filters.push({ services: { some: { price: { gte: Number(minPrice) } } } });
+    if (isFinite(maxPrice)) filters.push({ services: { some: { price: { lte: Number(maxPrice) } } } });
+    if (serviceName) filters.push({ services: { some: { name: { equals: serviceName, mode: 'insensitive' } } } });
+    if (categorySlug) filters.push({ services: { some: { category: { slug: { equals: categorySlug, mode: 'insensitive' } } } } });
+    const where: Prisma.ProviderWhereInput = filters.length ? { AND: filters } : {};
     const sort = dto.sort ?? 'price';
     const order = dto.order ?? 'asc';
     const lat = dto.lat as number;
     const lng = dto.lng as number;
     const radiusKm = dto.radiusKm as number;
     const useRadius = isFinite(lat) && isFinite(lng) && isFinite(radiusKm) && radiusKm > 0;
-    const serviceFilter = serviceName ? { services: { some: { name: { equals: serviceName, mode: 'insensitive' } } } } : {};
-    const categoryFilter = categorySlug ? { services: { some: { category: { slug: { equals: categorySlug, mode: 'insensitive' } } } } } : {};
+    const radiusWhere: Prisma.ProviderWhereInput = {
+      AND: [...filters, { lat: { not: null } }, { lng: { not: null } }],
+    };
+    const radiusSelect = {
+      id: true,
+      userId: true,
+      serviceRadiusKm: true,
+      online: true,
+      lat: true,
+      lng: true,
+      services: { select: { id: true, name: true, price: true, description: true } },
+      user: { select: { email: true, name: true } },
+    } satisfies Prisma.ProviderSelect;
     if (useRadius) {
-      type Row = {
-        id: string;
-        userId: string;
-        serviceRadiusKm: number | null;
-        online: boolean;
-        lat: number | null;
-        lng: number | null;
-        services: { id: string; name: string; price: number | null; description?: string }[];
-        user: { email: string; name: string | null };
-      };
-      const rows = (await this.prisma.provider.findMany({
-        where: { ...(where as any), ...(serviceFilter as any), ...(categoryFilter as any), lat: { not: null }, lng: { not: null } },
-        select: {
-          id: true,
-          userId: true,
-          serviceRadiusKm: true,
-          online: true,
-          lat: true,
-          lng: true,
-          services: { select: { id: true, name: true, price: true, description: true } },
-          user: { select: { email: true, name: true } },
-        },
+      const rows = await this.prisma.provider.findMany({
+        where: radiusWhere,
+        select: radiusSelect,
         take: Math.max(take * 10, 1000),
-      })) as unknown as Row[];
+      });
       const toRad = (d: number) => (d * Math.PI) / 180;
       const R = 6371;
-      type RowWithDist = Row & { distanceKm: number; minServicePrice: number | null };
+      type RowWithDist = Prisma.ProviderGetPayload<{ select: typeof radiusSelect }> & {
+        distanceKm: number;
+        minServicePrice: number | null;
+      };
       const withDist: RowWithDist[] = rows
         .map((p) => {
           const dLat = toRad((p.lat || 0) - lat);
@@ -150,32 +150,31 @@ export class ProvidersController {
       const paged = withDist.slice(start, start + take);
       return { items: paged, total, page, take, hasNext: start + paged.length < total };
     } else {
-      const total = await this.prisma.provider.count({ where: { ...(where as any), ...(serviceFilter as any), ...(categoryFilter as any) } });
-      type Row2 = {
-        id: string;
-        userId: string;
-        serviceRadiusKm: number | null;
-        online: boolean;
-        lat: number | null;
-        lng: number | null;
-        services: { id: string; name: string; price: number | null; description?: string; category: { name: string; slug: string } | null }[];
-        user: { email: string; name: string | null };
-      };
-      const rows = (await this.prisma.provider.findMany({
-        where: { ...(where as any), ...(serviceFilter as any), ...(categoryFilter as any) },
-        select: {
-          id: true,
-          userId: true,
-          serviceRadiusKm: true,
-          online: true,
-          lat: true,
-          lng: true,
-          services: { select: { id: true, name: true, price: true, description: true, category: { select: { name: true, slug: true } } } },
-          user: { select: { email: true, name: true } },
+      const total = await this.prisma.provider.count({ where });
+      const nonRadiusSelect = {
+        id: true,
+        userId: true,
+        serviceRadiusKm: true,
+        online: true,
+        lat: true,
+        lng: true,
+        services: {
+          select: {
+            id: true,
+            name: true,
+            price: true,
+            description: true,
+            category: { select: { name: true, slug: true } },
+          },
         },
+        user: { select: { email: true, name: true } },
+      } satisfies Prisma.ProviderSelect;
+      const rows = await this.prisma.provider.findMany({
+        where,
+        select: nonRadiusSelect,
         take: Math.max(take * 5, 500),
-      })) as unknown as Row2[];
-      const withPrice = rows.map((p: Row2) => {
+      });
+      const withPrice = rows.map((p) => {
         const minServicePrice = p.services.reduce((acc: number, s: { price: number | null }) => (typeof s.price === 'number' ? Math.min(acc, s.price || Infinity) : acc), Infinity);
         return { ...p, minServicePrice: isFinite(minServicePrice) ? minServicePrice : null };
       });
@@ -246,37 +245,32 @@ export class ProvidersController {
     const page = req.page ?? 1;
     const take = req.take ?? 50;
     if (!isFinite(lat) || !isFinite(lng)) return { items: [], total: 0, page, take, hasNext: false };
-    const where: Prisma.ProviderWhereInput = { lat: { not: null }, lng: { not: null } };
-    if (q) where.services = { some: { name: { contains: q, mode: 'insensitive' } } };
-    if (serviceName) where.services = { some: { ...(where.services?.some || {}), name: { equals: serviceName, mode: 'insensitive' } } };
-    if (categorySlug) where.services = { some: { ...(where.services?.some || {}), category: { slug: { equals: categorySlug, mode: 'insensitive' } } } };
-    if (onlineOnly) where.online = true;
-    if (isFinite(minPrice)) where.services = { some: { ...(where.services?.some || {}), price: { gte: Number(minPrice) } } };
-    if (isFinite(maxPrice)) where.services = { some: { ...(where.services?.some || {}), price: { lte: Number(maxPrice) } } };
-      type NearRow = {
-        id: string;
-        userId: string;
-        lat: number | null;
-        lng: number | null;
-        serviceRadiusKm: number | null;
-        online: boolean;
-        services: { id: string; name: string; price: number | null; category: { name: string; slug: string } | null }[];
-        user: { name: string | null; email: string };
-      };
-      const rows: NearRow[] = await this.prisma.provider.findMany({
-        where: where as any,
-        select: {
-          id: true,
-          userId: true,
-          lat: true,
-          lng: true,
-          serviceRadiusKm: true,
-          online: true,
-          services: { select: { id: true, name: true, price: true, category: { select: { name: true, slug: true } } } },
-          user: { select: { name: true, email: true } },
-        },
-        take: 500,
-      });
+    const nearFilters: Prisma.ProviderWhereInput[] = [
+      { lat: { not: null } },
+      { lng: { not: null } },
+    ];
+    if (q) nearFilters.push({ services: { some: { name: { contains: q, mode: 'insensitive' } } } });
+    if (serviceName) nearFilters.push({ services: { some: { name: { equals: serviceName, mode: 'insensitive' } } } });
+    if (categorySlug) nearFilters.push({ services: { some: { category: { slug: { equals: categorySlug, mode: 'insensitive' } } } } });
+    if (onlineOnly) nearFilters.push({ online: true });
+    if (isFinite(minPrice)) nearFilters.push({ services: { some: { price: { gte: Number(minPrice) } } } });
+    if (isFinite(maxPrice)) nearFilters.push({ services: { some: { price: { lte: Number(maxPrice) } } } });
+    const nearWhere: Prisma.ProviderWhereInput = { AND: nearFilters };
+    const nearSelect = {
+      id: true,
+      userId: true,
+      lat: true,
+      lng: true,
+      serviceRadiusKm: true,
+      online: true,
+      services: { select: { id: true, name: true, price: true, category: { select: { name: true, slug: true } } } },
+      user: { select: { name: true, email: true } },
+    } satisfies Prisma.ProviderSelect;
+    const rows = await this.prisma.provider.findMany({
+      where: nearWhere,
+      select: nearSelect,
+      take: 500,
+    });
     const toRad = (d: number) => (d * Math.PI) / 180;
     const R = 6371; // km
     const withDist = rows
@@ -380,7 +374,7 @@ export class ProvidersController {
   @ApiOperation({ summary: 'List distinct service names with counts' })
   @ApiOkResponse({ description: 'Array of { name, count }', schema: { type: 'array', items: { type: 'object', properties: { name: { type: 'string' }, count: { type: 'integer' } } } } })
   async listServices() {
-    const rows = await (this.prisma as any).service.groupBy({ by: ['name'], _count: { _all: true } }) as Array<{ name: string; _count: { _all: number } }>;
+    const rows = await this.prisma.service.groupBy({ by: ['name'], _count: { _all: true } });
     return rows.map((r) => ({ name: r.name, count: r._count._all }));
   }
 
@@ -408,14 +402,6 @@ export class ProvidersController {
   @ApiOperation({ summary: 'Mark assignment completed (provider)' })
   @ApiOkResponse({ description: 'Updated assignment', schema: { type: 'object' } })
   async completeAssignment(@Param('id') id: string, @Req() req: AuthedRequest) {
-    const userId: string = req.user.sub;
-    const provider = await this.prisma.provider.findUnique({ where: { userId } });
-    if (!provider) return { ok: false };
-    // Verify ownership
-    const a = await this.prisma.assignment.findUnique({ where: { id }, select: { id: true, providerId: true } });
-    if (!a || a.providerId !== provider.id) {
-      throw new (require('@nestjs/common').ForbiddenException)('Not allowed');
-    }
-    return this.prisma.assignment.update({ where: { id }, data: { status: 'completed', completedAt: new Date() } });
+    return this.assignments.completeAssignmentAsProvider(id, req.user.sub);
   }
 }

@@ -9,6 +9,8 @@ import { QuotesRoleLimitGuard } from '../common/guards/quotes-role-limit.guard';
 import { JobsRoleLimitGuard } from '../common/guards/jobs-role-limit.guard';
 import { QuotesService } from './quotes.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { AssignmentsService } from './assignments.service';
+import { PaymentsService } from '../payments/payments.service';
 import type { AuthedRequest } from '../common/types/request';
 
 describe('JobsController - quotes', () => {
@@ -17,18 +19,20 @@ describe('JobsController - quotes', () => {
     provider: { findUnique: jest.Mock };
     job: { findUnique: jest.Mock };
     quote: { findFirst: jest.Mock; create: jest.Mock };
-    assignment: { upsert: jest.Mock };
+    assignment: { upsert: jest.Mock; update: jest.Mock };
     $transaction: jest.Mock;
   };
 
   const metricsMock = { incPaymentInitiate: jest.fn() } as unknown as MetricsService;
+  const paymentsMockImpl = { handleCustomerVerification: jest.fn().mockResolvedValue({ mode: 'manual' }) };
+  const paymentsMock = paymentsMockImpl as unknown as PaymentsService;
 
   beforeEach(async () => {
     prisma = {
       provider: { findUnique: jest.fn() },
       job: { findUnique: jest.fn() },
       quote: { findFirst: jest.fn(), create: jest.fn() },
-      assignment: { upsert: jest.fn() },
+      assignment: { upsert: jest.fn(), update: jest.fn() },
       $transaction: jest.fn(),
     } as any;
 
@@ -38,6 +42,8 @@ describe('JobsController - quotes', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: MetricsService, useValue: metricsMock },
         NotificationsService,
+        { provide: AssignmentsService, useValue: { proposeScheduleAsCustomer: jest.fn() } },
+        { provide: PaymentsService, useValue: paymentsMock },
         QuotesService,
       ],
     })
@@ -102,5 +108,19 @@ describe('JobsController - quotes', () => {
     expect(prisma.quote.create).toHaveBeenCalledWith({
       data: { jobId: 'job1', providerId: 'prov1', total: 300 },
     });
+  });
+
+  it('calls payments service when customer verifies completion', async () => {
+    prisma.job.findUnique.mockResolvedValue({
+      id: 'job1',
+      customerId: 'cust1',
+      assignment: { id: 'assign1', status: 'scheduled' },
+    });
+    prisma.assignment.update.mockResolvedValue({ id: 'assign1', status: 'customer_verified', customerVerifiedAt: new Date().toISOString() });
+
+    const result = await controller.customerComplete('job1', reqWithUser('cust1'));
+    expect(result.status).toBe('customer_verified');
+    expect(metricsMock.incPaymentInitiate).toHaveBeenCalledWith('job_complete');
+    expect(paymentsMockImpl.handleCustomerVerification).toHaveBeenCalledWith('job1');
   });
 });

@@ -9,6 +9,10 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const request = ctx.getRequest<Request>();
 
     const isHttp = exception instanceof HttpException;
+    if (!isHttp || (isHttp && (exception as HttpException).getStatus() >= 500)) {
+      // eslint-disable-next-line no-console
+      console.error(exception);
+    }
     const status = isHttp ? (exception as HttpException).getStatus() : HttpStatus.INTERNAL_SERVER_ERROR;
     const resp = isHttp ? (exception as HttpException).getResponse() : undefined;
     type HttpPayload = { message?: string | string[]; error?: string } | string | undefined;

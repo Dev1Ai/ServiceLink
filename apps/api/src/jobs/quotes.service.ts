@@ -2,6 +2,8 @@ import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundEx
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateQuoteDto } from './dto/job.dto';
 import { NotificationsService } from '../notifications/notifications.service';
+import { AssignmentReminderStatus, AssignmentPayoutStatus } from '@prisma/client';
+import { ASSIGNMENT_STATUS } from './assignments.service';
 
 @Injectable()
 export class QuotesService {
@@ -64,11 +66,14 @@ export class QuotesService {
   }
 
   async acceptQuote(jobId: string, quoteId: string, userId: string) {
-    const job = await this.prisma.job.findUnique({ where: { id: jobId }, select: { id: true, customerId: true, assignment: { select: { id: true, status: true } } } });
+    const job = await this.prisma.job.findUnique({
+      where: { id: jobId },
+      select: { id: true, customerId: true, assignment: { select: { id: true, status: true } } },
+    });
     if (!job || job.customerId !== userId) {
       throw new ForbiddenException('Not allowed');
     }
-    if (job.assignment) {
+    if (job.assignment && job.assignment.status !== ASSIGNMENT_STATUS.PROVIDER_REJECTED) {
       throw new BadRequestException('Assignment already exists for this job');
     }
     // Ensure there isn't an already accepted quote lingering (safety)
@@ -91,7 +96,26 @@ export class QuotesService {
       await tx.quote.updateMany({ where: { jobId: job.id, NOT: { id: quoteId } }, data: { status: 'declined' } });
       await tx.assignment.upsert({
         where: { jobId: job.id },
-        update: { providerId: quote.providerId, acceptedAt: new Date() },
+        update: {
+          providerId: quote.providerId,
+          acceptedAt: new Date(),
+          status: ASSIGNMENT_STATUS.PENDING_SCHEDULE,
+          scheduleVersion: 0,
+          scheduledStart: null,
+          scheduledEnd: null,
+          scheduleProposedBy: null,
+          scheduleProposedAt: null,
+          scheduleNotes: null,
+          completedAt: null,
+          customerVerifiedAt: null,
+          rejectedAt: null,
+          reminderStatus: AssignmentReminderStatus.NONE,
+          reminderLastSentAt: null,
+          reminderCount: 0,
+          payoutStatus: AssignmentPayoutStatus.PENDING,
+          payoutApprovedAt: null,
+          payoutApprovedBy: null,
+        },
         create: { jobId: job.id, providerId: quote.providerId },
       });
     });
