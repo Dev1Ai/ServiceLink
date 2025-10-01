@@ -7,6 +7,7 @@ permissions:
   projects: write
 
 on:
+  workflow_dispatch:
   issues:
     types: [opened, labeled, reopened, closed]
   pull_request:
@@ -22,7 +23,7 @@ jobs:
           curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" https://api.github.com/rate_limit
           echo "✅ If this call succeeds, the token is valid."
           echo "🔍 Checking repo permissions from GitHub context..."
-          echo '${{ toJson(github.permissions) }}'
+          echo "${{ toJson(github.permissions) }}"
 
   auto-label:
     runs-on: ubuntu-latest
