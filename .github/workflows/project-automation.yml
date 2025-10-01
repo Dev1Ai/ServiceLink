@@ -1,0 +1,117 @@
+name: Project Automation
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  projects: write
+
+on:
+  issues:
+    types: [opened, labeled, reopened, closed]
+  pull_request:
+    types: [opened, labeled, reopened, synchronize, closed]
+
+jobs:
+  auto-label:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Auto-apply milestone labels
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const branch = (context.payload.pull_request?.head?.ref || '').toLowerCase();
+            const title = (context.payload.pull_request?.title || context.payload.issue?.title || '').toLowerCase();
+
+            const patterns = [
+              { label: 'm0', keywords: ['bootstrap'] },
+              { label: 'm1', keywords: ['auth'] },
+              { label: 'm2', keywords: ['categories'] },
+              { label: 'm3', keywords: ['availability'] },
+              { label: 'm4', keywords: ['quotes'] },
+              { label: 'm5', keywords: ['payments'] },
+              { label: 'm6', keywords: ['llm'] },
+              { label: 'm7', keywords: ['beta'] },
+            ];
+
+            const labelsToApply = new Set();
+
+            for (const { label, keywords } of patterns) {
+              if (branch.startsWith(label)) {
+                labelsToApply.add(label);
+                continue;
+              }
+              if (keywords.some((k) => branch.includes(k) || title.includes(k))) {
+                labelsToApply.add(label);
+              }
+            }
+
+            if (labelsToApply.size === 0) {
+              core.info('ℹ️ No milestone labels detected from branch/title.');
+              return;
+            }
+
+            const issueNumber = context.payload.pull_request?.number || context.payload.issue?.number;
+            if (!issueNumber) {
+              core.info('ℹ️ No issue or pull request number found, skipping label application.');
+              return;
+            }
+
+            const labels = [...labelsToApply].filter((label) => {
+              if (context.payload.pull_request?.labels) {
+                return !context.payload.pull_request.labels.some((l) => l.name === label);
+              }
+              if (context.payload.issue?.labels) {
+                return !context.payload.issue.labels.some((l) => l.name === label);
+              }
+              return true;
+            });
+
+            if (labels.length === 0) {
+              core.info('ℹ️ All matching labels already applied.');
+              return;
+            }
+
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              labels,
+            });
+            core.info(`✅ Applied labels: ${labels.join(', ')}`);
+
+  add-to-project:
+    needs: auto-label
+    runs-on: ubuntu-latest
+    steps:
+      - name: Add item to Project Board
+        uses: actions/add-to-project@v0.5.0
+        with:
+          project-url: https://github.com/users/${{ github.repository_owner }}/projects/1
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          labeled: m0,m1,m2,m3,m4,m5,m6,m7
+
+  update-status:
+    needs: add-to-project
+    if: >-
+      (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
+      (github.event_name == 'issues' && github.event.action == 'closed')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Log milestone & transition
+        run: |
+          echo "🔎 Item #${{ github.event.pull_request.number || github.event.issue.number }} closed/merged"
+          echo "✅ Moving milestone card → Done"
+
+      - name: Move card to Done
+        uses: peter-evans/update-project-card@v2
+        with:
+          project-url: https://github.com/users/${{ github.repository_owner }}/projects/1
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          column-name: Done
+          issue-number: ${{ github.event.pull_request.number || github.event.issue.number }}
+
+      - name: Log transition success
+        run: |
+          echo "📌 Status transition complete for #${{ github.event.pull_request.number || github.event.issue.number }}"
