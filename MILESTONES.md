@@ -1,24 +1,27 @@
 # Milestone Progress Report
 
 ## ✅ Current Milestone
-- M2 — Realtime & Presence
+- M3 — Jobs & Matching
 - Completed subtasks:
-  - Socket.IO gateway at `/ws` with JWT auth and Redis adapter (if `REDIS_URL`)
-  - Presence tracking (Redis-backed) with TTL + reconcile; REST `GET /presence`
-  - Typing indicators + minimal room chat with persistence for `job:<key>` rooms; `GET /jobs/:key/messages`
-  - Client demo page `/realtime` (login, connect, presence, chat, history)
-  - Metrics: Prometheus `/metrics` + custom counters (auth/ws) + Grafana provisioning
-  - Nginx reverse proxy (`/api`, `/ws`, `/docs`), docker-compose for dev/prod
-  - Security: app-level nonce-based CSP (balanced), lint rules; CORS & security headers
+  - Customer job creation API + web form with validation
+  - Provider discovery flows (search + near) with radius filtering and Next UI helpers
+  - Quote lifecycle: provider submit/list, customer accept/revoke, assignment sync, notifications
+  - Realtime job chat persisted to Prisma with history fetch in web demo
+  - Static export-safe job links (fallback routes for quotes/quote form)
 
 ## ⚡ Next Milestone
-- M3 — Jobs & Matching
+- M4 — Fulfillment & Automation
+- Planning references:
+  - Scope + requirements in `docs/M4-Fulfillment.md`
+  - Ticket backlog in `docs/M4-Tickets.md`
+  - Sprint allocations in `docs/M4-Sprint-Plan.md`
+  - Grooming checklist in `docs/M4-Grooming.md`
+  - Coordination checklist in `docs/M4-Coordination.md`
 - Immediate next steps:
-  - Job creation endpoint + schema (title, description, customerId) and basic validation
-  - Provider discovery: list providers by service/category and distance (uses provider.radius)
-  - Quote flow: POST `/jobs/:id/quotes` (provider-only), list quotes, accept assignment
-  - Expand chat to associate with jobId consistently and load history in UI
-  - Add basic notifications (email placeholder/logs) on quote/assignment
+  - Lock scope (scheduling, workflow automation, payment capture follow-ups) with stakeholders
+  - Identify coverage gaps/tests to finish before handing off M3
+  - Document new env requirements + ops runbooks for automation pieces
+  - Decide on background job framework (BullMQ vs cron) and capture in ADR
 
 ## 📌 Notes
 - Stripe: real onboarding requires valid `STRIPE_SECRET_KEY`/webhook secret; currently returns a mock URL when unset/placeholders
@@ -28,4 +31,4 @@
 
 - CSP hardening: web currently runs with `ENABLE_STRICT_CSP=true` at `CSP_STRICT_LEVEL=balanced` (dev+prod). TODO: audit all inline scripts/styles and flip to `strict` in compose when safe.
 
-\nLast updated: 2025-09-13 01:05:34Z
+\nLast updated: 2025-09-18 11:42:00Z
