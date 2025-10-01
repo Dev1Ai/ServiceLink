@@ -7,6 +7,7 @@ permissions:
   projects: write
 
 on:
+  workflow_dispatch: {}
   issues:
     types: [opened, labeled, reopened, closed]
   pull_request:
@@ -25,21 +26,24 @@ jobs:
           echo '${{ toJson(github.permissions) }}'
 
   auto-label:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    env:
+      BRANCH_NAME: ${{ github.head_ref }}
     steps:
       - name: Auto-apply milestone labels
         uses: actions-ecosystem/action-add-labels@v1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           labels: |
-            ${{ startsWith(github.head_ref, 'm0') || contains(github.head_ref, 'bootstrap') && 'm0' || '' }}
-            ${{ startsWith(github.head_ref, 'm1') || contains(github.head_ref, 'auth') && 'm1' || '' }}
-            ${{ startsWith(github.head_ref, 'm2') || contains(github.head_ref, 'categories') && 'm2' || '' }}
-            ${{ startsWith(github.head_ref, 'm3') || contains(github.head_ref, 'availability') && 'm3' || '' }}
-            ${{ startsWith(github.head_ref, 'm4') || contains(github.head_ref, 'quotes') && 'm4' || '' }}
-            ${{ startsWith(github.head_ref, 'm5') || contains(github.head_ref, 'payments') && 'm5' || '' }}
-            ${{ startsWith(github.head_ref, 'm6') || contains(github.head_ref, 'llm') && 'm6' || '' }}
-            ${{ startsWith(github.head_ref, 'm7') || contains(github.head_ref, 'beta') && 'm7' || '' }}
+            ${{ startsWith(env.BRANCH_NAME, 'm0') || contains(env.BRANCH_NAME, 'bootstrap') && 'm0' || '' }}
+            ${{ startsWith(env.BRANCH_NAME, 'm1') || contains(env.BRANCH_NAME, 'auth') && 'm1' || '' }}
+            ${{ startsWith(env.BRANCH_NAME, 'm2') || contains(env.BRANCH_NAME, 'categories') && 'm2' || '' }}
+            ${{ startsWith(env.BRANCH_NAME, 'm3') || contains(env.BRANCH_NAME, 'availability') && 'm3' || '' }}
+            ${{ startsWith(env.BRANCH_NAME, 'm4') || contains(env.BRANCH_NAME, 'quotes') && 'm4' || '' }}
+            ${{ startsWith(env.BRANCH_NAME, 'm5') || contains(env.BRANCH_NAME, 'payments') && 'm5' || '' }}
+            ${{ startsWith(env.BRANCH_NAME, 'm6') || contains(env.BRANCH_NAME, 'llm') && 'm6' || '' }}
+            ${{ startsWith(env.BRANCH_NAME, 'm7') || contains(env.BRANCH_NAME, 'beta') && 'm7' || '' }}
 
   add-to-project:
     runs-on: ubuntu-latest
