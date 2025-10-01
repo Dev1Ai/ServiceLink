@@ -88,7 +88,7 @@ jobs:
       - name: Add item to Project Board
         uses: actions/add-to-project@v0.5.0
         with:
-          project-url: https://github.com/orgs/${{ github.repository_owner }}/projects/1
+          project-url: https://github.com/users/${{ github.repository_owner }}/projects/1
           github-token: ${{ secrets.GITHUB_TOKEN }}
           labeled: m0,m1,m2,m3,m4,m5,m6,m7
 
@@ -107,7 +107,7 @@ jobs:
       - name: Move card to Done
         uses: peter-evans/update-project-card@v2
         with:
-          project-url: https://github.com/orgs/${{ github.repository_owner }}/projects/1
+          project-url: https://github.com/users/${{ github.repository_owner }}/projects/1
           github-token: ${{ secrets.GITHUB_TOKEN }}
           column-name: Done
           issue-number: ${{ github.event.pull_request.number || github.event.issue.number }}
