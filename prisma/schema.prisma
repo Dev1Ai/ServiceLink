@@ -7,66 +7,61 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Role {
+  CUSTOMER
+  PROVIDER
+  ADMIN
+}
+
 model User {
-  id        String        @id @default(cuid())
-  email     String        @unique
-  phone     String?       @unique
-  role      Role
-  status    String        @default("active")
-  createdAt DateTime      @default(now())
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String
+  role      Role     @default(CUSTOMER)
+  status    String   @default("active")
+  createdAt DateTime @default(now())
 
-  // one-to-one
   profile   Profile?
-
-  // one-to-one provider profile (if this user is a provider)
   provider  Provider?
-
-  // back-relations (added)
-  jobsAsCustomer   Job[]          @relation("CustomerJobs")
-  messagesSent     ChatMessage[]  @relation("UserMessages")
-  payments         Payment[]
-  reviewsGiven     Review[]       @relation("UserReviews") // already referenced by Review.rater
-  reviewsReceived  Review[]       @relation("UserReviewsReceived") // optional convenience backref
+  jobs      Job[]         @relation("UserJobs")
+  messages  ChatMessage[]
+  payments  Payment[]
 }
 
 model Profile {
   id        String  @id @default(cuid())
-  user      User    @relation(fields: [userId], references: [id])
-  userId    String  @unique
-  firstName String?
-  lastName  String?
+  firstName String
+  lastName  String
   avatarUrl String?
-  city      String?
-  state     String?
-  rating    Float   @default(0)
+  userId    String  @unique
+  user      User    @relation(fields: [userId], references: [id])
 }
 
 model Provider {
-  id               String   @id @default(cuid())
-  user             User     @relation(fields: [userId], references: [id])
-  userId           String   @unique
-  companyName      String?
-  serviceRadiusKm  Int      @default(15)
-  online           Boolean  @default(false)
-  kycStatus        String   @default("pending")
-  stripeAccountId  String?
-
-  services         ProviderService[]
-  documents        ProviderDocument[]
-  availability     Availability[]
-
-  // back-relations (added)
-  quotes           Quote[]
-  assignments      Assignment[]
+  id              String       @id @default(cuid())
+  userId          String       @unique
+  user            User         @relation(fields: [userId], references: [id])
+  stripeAccountId String?
+  kycStatus       String       @default("pending")
+  serviceRadiusKm Int?
+  online          Boolean      @default(false)
+  services        Service[]
+  quotes          Quote[]
+  assignments     Assignment[]
+  lat             Float?
+  lng             Float?
 }
 
-model ProviderDocument {
-  id         String   @id @default(cuid())
-  provider   Provider @relation(fields: [providerId], references: [id])
-  providerId String
-  docType    String
-  url        String
-  verifiedAt DateTime?
+model Service {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  price       Int?
+  providerId  String
+  provider    Provider  @relation(fields: [providerId], references: [id])
+  categoryId  String?
+  category    Category? @relation(fields: [categoryId], references: [id])
 }
 
 model Category {
@@ -78,140 +73,107 @@ model Category {
   children Category[] @relation("CategoryParent")
 
   services Service[]
-  // back-relations (added)
-  jobs     Job[]
-}
-
-model Service {
-  id          String   @id @default(cuid())
-  category    Category @relation(fields: [categoryId], references: [id])
-  categoryId  String
-  name        String
-  basePrice   Int      @default(0)
-  unit        String   @default("hour")
-  metadata    Json?
-  providers   ProviderService[]
-}
-
-model ProviderService {
-  id            String    @id @default(cuid())
-  provider      Provider  @relation(fields: [providerId], references: [id])
-  providerId    String
-  service       Service   @relation(fields: [serviceId], references: [id])
-  serviceId     String
-  priceOverride Int?
-  minCalloutFee Int?
-}
-
-model Availability {
-  id         String   @id @default(cuid())
-  provider   Provider @relation(fields: [providerId], references: [id])
-  providerId String
-  weekday    Int
-  startTime  String
-  endTime    String
-  overrides  Json?
 }
 
 model Job {
-  id            String      @id @default(cuid())
-
-  // customer relation (name the relation so the backref is clear)
-  customer      User        @relation("CustomerJobs", fields: [customerId], references: [id])
-  customerId    String
-
-  // category relation
-  category      Category    @relation(fields: [categoryId], references: [id])
-  categoryId    String
-
-  status        String      @default("open")
-  address       String?
-  lat           Float?
-  lng           Float?
-  description   String?
-  mediaUrls     String[]
-  createdAt     DateTime    @default(now())
-  scheduledFor  DateTime?
-  requiresQuote Boolean     @default(true)
-
-  quotes        Quote[]
-  assignments   Assignment[]
-  messages      ChatMessage[]
-  payment       Payment?
-  review        Review?
-}
-
-model Quote {
-  id         String    @id @default(cuid())
-  job        Job       @relation(fields: [jobId], references: [id])
-  jobId      String
-  provider   Provider  @relation(fields: [providerId], references: [id])
-  providerId String
-  total      Int
-  expiresAt  DateTime
-  notes      String?
-  status     String    @default("pending")
-}
-
-model Assignment {
-  id         String    @id @default(cuid())
-  job        Job       @relation(fields: [jobId], references: [id])
-  jobId      String
-  provider   Provider  @relation(fields: [providerId], references: [id])
-  providerId String
-  acceptedAt DateTime?
-  etaSeconds Int?
-  startAt    DateTime?
-  completeAt DateTime?
+  id          String        @id @default(cuid())
+  key         String        @unique
+  title       String
+  description String
+  customerId  String
+  customer    User          @relation("UserJobs", fields: [customerId], references: [id])
+  createdAt   DateTime      @default(now())
+  messages    ChatMessage[]
+  quotes      Quote[]
+  assignment  Assignment?
+  payment     Payment?
 }
 
 model ChatMessage {
   id        String   @id @default(cuid())
-  job       Job      @relation(fields: [jobId], references: [id])
   jobId     String
-
-  sender    User     @relation("UserMessages", fields: [senderId], references: [id])
-  senderId  String
-
-  kind      String   @default("text")
+  job       Job      @relation(fields: [jobId], references: [id])
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
   content   String
   createdAt DateTime @default(now())
 }
 
+model Quote {
+  id         String   @id @default(cuid())
+  jobId      String
+  job        Job      @relation(fields: [jobId], references: [id])
+  providerId String
+  provider   Provider @relation(fields: [providerId], references: [id])
+  total      Int
+  notes      String?
+  expiresAt  DateTime?
+  status     String   @default("pending")
+  createdAt  DateTime @default(now())
+
+  @@unique([jobId, providerId])
+}
+
+model Assignment {
+  id                 String                      @id @default(cuid())
+  jobId              String                      @unique
+  job                Job                         @relation(fields: [jobId], references: [id])
+  providerId         String
+  provider           Provider                    @relation(fields: [providerId], references: [id])
+  acceptedAt         DateTime                    @default(now())
+  status             String                      @default("pending_schedule")
+  scheduledStart     DateTime?
+  scheduledEnd       DateTime?
+  scheduleProposedBy ScheduleProposedBy?
+  scheduleProposedAt DateTime?
+  scheduleVersion    Int                         @default(0)
+  scheduleNotes      String?
+  completedAt        DateTime?
+  customerVerifiedAt DateTime?
+  rejectedAt         DateTime?
+  reminderStatus     AssignmentReminderStatus    @default(NONE)
+  reminderLastSentAt DateTime?
+  reminderCount      Int                         @default(0)
+  payoutStatus       AssignmentPayoutStatus      @default(PENDING)
+  payoutApprovedBy   String?
+  payoutApprovedAt   DateTime?
+  createdAt          DateTime                    @default(now())
+  updatedAt          DateTime                    @updatedAt
+
+  @@index([status])
+  @@index([reminderStatus])
+  @@index([payoutStatus])
+}
+
 model Payment {
   id                   String   @id @default(cuid())
-  job                  Job      @relation(fields: [jobId], references: [id])
   jobId                String   @unique
-
-  customer             User     @relation(fields: [customerId], references: [id])
+  job                  Job      @relation(fields: [jobId], references: [id])
   customerId           String
-
+  customer             User     @relation(fields: [customerId], references: [id])
   amount               Int
   currency             String   @default("usd")
   stripePaymentIntentId String?
   status               String   @default("requires_capture")
 }
 
-model Review {
-  id          String   @id @default(cuid())
-  job         Job      @relation(fields: [jobId], references: [id])
-  jobId       String   @unique
-
-  // rater is a User (backref is User.reviewsGiven)
-  rater       User     @relation("UserReviews", fields: [raterUserId], references: [id])
-  raterUserId String
-
-  // ratee is also a User (separate relation name so it doesn't collide)
-  ratee       User     @relation("UserReviewsReceived", fields: [rateeUserId], references: [id])
-  rateeUserId String
-
-  stars       Int
-  text        String?
-  createdAt   DateTime @default(now())
+enum ScheduleProposedBy {
+  CUSTOMER
+  PROVIDER
+  SYSTEM
 }
 
-enum Role {
-  customer
-  provider
-  admin
+enum AssignmentReminderStatus {
+  NONE
+  QUEUED
+  SENT
+  OVERDUE
+}
+
+enum AssignmentPayoutStatus {
+  PENDING
+  AWAITING_APPROVAL
+  APPROVED
+  PAID
+  BLOCKED
 }

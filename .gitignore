@@ -22,3 +22,15 @@ dist
 # Prisma
 prisma/migrations
 .prisma
+
+# Test artifacts
+playwright-report/
+test-results/
+playwright-error.*
+coverage/
+
+# IDE and OS
+.vscode/
+.idea/
+*.swp
+*.swo
