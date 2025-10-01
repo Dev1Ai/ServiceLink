@@ -12,6 +12,8 @@ export class MetricsService {
   private readonly wsTypingCounter: Counter<string>;
   private readonly wsChatCounter: Counter<string>;
   private readonly paymentInitiateCounter: Counter<string>;
+  private readonly reminderSentCounter: Counter<string>;
+  private readonly reminderFailedCounter: Counter<string>;
   private readonly httpHistogram: Histogram<string>;
 
   constructor() {
@@ -59,6 +61,20 @@ export class MetricsService {
       registers: [this.reg],
     });
 
+    this.reminderSentCounter = new Counter({
+      name: 'reminder_sent_total',
+      help: 'Total assignment reminders sent',
+      labelNames: ['status'] as const,
+      registers: [this.reg],
+    });
+
+    this.reminderFailedCounter = new Counter({
+      name: 'reminder_failed_total',
+      help: 'Total reminder failures (enqueue/process)',
+      labelNames: ['reason'] as const,
+      registers: [this.reg],
+    });
+
     this.httpHistogram = new Histogram({
       name: 'http_request_duration_seconds',
       help: 'HTTP request duration in seconds',
@@ -90,6 +106,14 @@ export class MetricsService {
 
   incPaymentInitiate(source: string = 'job_complete') {
     this.paymentInitiateCounter.labels(source).inc();
+  }
+
+  incReminderSent(status: string) {
+    this.reminderSentCounter.labels(status?.toUpperCase?.() || 'UNKNOWN').inc();
+  }
+
+  incReminderFailed(reason: string) {
+    this.reminderFailedCounter.labels(reason || 'unknown').inc();
   }
 
   recordHttpDuration(method: string, route: string, statusCode: number, seconds: number) {

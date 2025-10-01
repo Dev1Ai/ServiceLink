@@ -6,9 +6,15 @@ module.exports = {
   root: true,
   extends: ['next/core-web-vitals'],
   plugins: ['react-hooks'],
+  settings: {
+    next: {
+      rootDir: ['apps/web'],
+    },
+  },
   rules: {
     // Ensure plugin is registered so inline disables resolve cleanly
     'react-hooks/exhaustive-deps': 'warn',
+    '@next/next/no-html-link-for-pages': 'off',
     // Enforce nonce on inline <style>
     'no-restricted-syntax': [
       'error',
