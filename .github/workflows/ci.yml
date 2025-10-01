@@ -71,7 +71,7 @@ jobs:
       - name: Prisma schema validation
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/servicelink
-        run: pnpm exec prisma validate
+        run: pnpm --filter api exec prisma validate --schema=prisma/schema.prisma
 
       - name: Build API
         env:
