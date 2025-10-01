@@ -9,6 +9,9 @@ import { MetricsService } from '../metrics/metrics.service';
 import { QuotesService } from './quotes.service';
 import { JobsRoleLimitGuard } from '../common/guards/jobs-role-limit.guard';
 import type { AuthedRequest } from '../common/types/request';
+import { AssignmentsService, ASSIGNMENT_STATUS } from './assignments.service';
+import { AssignmentDto, ProposeScheduleDto } from './dto/schedule.dto';
+import { PaymentsService } from '../payments/payments.service';
 
 /**
  * Jobs + Quotes Controller
@@ -20,7 +23,13 @@ import type { AuthedRequest } from '../common/types/request';
 @Controller('jobs')
 export class JobsController {
   private readonly logger = new Logger(JobsController.name);
-  constructor(private readonly prisma: PrismaService, private readonly metrics: MetricsService, private readonly quotes: QuotesService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly metrics: MetricsService,
+    private readonly quotes: QuotesService,
+    private readonly assignments: AssignmentsService,
+    private readonly payments: PaymentsService,
+  ) {}
 
   @Get('mine')
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -45,6 +54,12 @@ export class JobsController {
             id: true,
             providerId: true,
             acceptedAt: true,
+            status: true,
+            scheduledStart: true,
+            scheduledEnd: true,
+            scheduleVersion: true,
+            scheduleProposedBy: true,
+            scheduleProposedAt: true,
             provider: { select: { id: true, user: { select: { name: true, email: true } } } },
           },
         },
@@ -93,13 +108,37 @@ export class JobsController {
             providerId: true,
             acceptedAt: true,
             status: true,
+            scheduledStart: true,
+            scheduledEnd: true,
+            scheduleVersion: true,
+            scheduleProposedBy: true,
+            scheduleProposedAt: true,
+            scheduleNotes: true,
             completedAt: true,
             customerVerifiedAt: true,
+            rejectedAt: true,
+            reminderStatus: true,
+            reminderLastSentAt: true,
+            reminderCount: true,
+            payoutStatus: true,
+            payoutApprovedAt: true,
+            payoutApprovedBy: true,
             provider: { select: { id: true, userId: true, user: { select: { name: true, email: true } } } },
           },
         },
       },
     });
+  }
+
+  @Post(':id/schedule')
+  @UseGuards(JwtAuthGuard, RolesGuard, JobsRoleLimitGuard)
+  @Roles('CUSTOMER')
+  @ApiBearerAuth('bearer')
+  @ApiOperation({ summary: 'Customer proposes a schedule window for the assigned provider' })
+  @ApiOkResponse({ type: AssignmentDto })
+  @ApiBadRequestResponse({ type: ErrorDto })
+  async proposeSchedule(@Param('id') id: string, @Req() req: AuthedRequest, @Body() dto: ProposeScheduleDto) {
+    return this.assignments.proposeScheduleAsCustomer(id, req.user.sub, dto);
   }
 
   // Quotes
@@ -162,10 +201,13 @@ export class JobsController {
     const job = await this.prisma.job.findUnique({ where: { id }, select: { id: true, customerId: true, assignment: { select: { id: true, status: true } } } });
     if (!job || job.customerId !== req.user.sub) throw new ForbiddenException('Not allowed');
     if (!job.assignment) throw new BadRequestException('No active assignment');
-    const updated = await this.prisma.assignment.update({ where: { id: job.assignment.id }, data: { status: 'customer_verified', customerVerifiedAt: new Date() } });
-    // Payment initiation placeholder (replace with Stripe capture flow)
-    this.logger.log(`Payment initiation placeholder for job ${id}, assignment ${updated.id}`);
+    const updated = await this.prisma.assignment.update({
+      where: { id: job.assignment.id },
+      data: { status: ASSIGNMENT_STATUS.CUSTOMER_VERIFIED, customerVerifiedAt: new Date() },
+    });
     this.metrics.incPaymentInitiate('job_complete');
+    const paymentResult = await this.payments.handleCustomerVerification(id);
+    this.logger.log(`Payment capture mode for job ${id}: ${paymentResult.mode}`);
     return updated;
   }
 }
