@@ -6,7 +6,10 @@ test.describe('Providers Search filters and URL sync', () => {
     // Enter a seeded service name and search
     const input = page.getByPlaceholder('service contains');
     await input.fill('mowing');
-    await page.getByRole('button', { name: 'Search' }).click();
+    await Promise.all([
+      page.waitForURL(/q=mowing/, { timeout: 10000 }),
+      page.getByRole('button', { name: 'Search' }).click(),
+    ]);
     // URL should include q=mowing (case-insensitive search)
     await expect(page).toHaveURL(/q=mowing/);
     // At least one provider card should render

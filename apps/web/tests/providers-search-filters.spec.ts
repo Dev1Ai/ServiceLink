@@ -8,19 +8,19 @@ test.describe('Providers Search category/service filters', () => {
     await expect(categorySelect).toBeVisible();
 
     // Wait for categories to populate (seeded includes Plumbing)
-    await expect(page.locator('option', { hasText: /Plumbing/ })).toBeVisible({ timeout: 10000 });
+    await expect(categorySelect).toContainText('Home Services › Plumbing');
 
-    // Select Plumbing and assert URL sync
-    await page.selectOption('select', { value: 'plumbing' });
+    // Select Plumbing category and assert URL sync
+    await categorySelect.selectOption({ value: 'plumbing' });
     await expect(page).toHaveURL(/category=plumbing/);
 
     // Service list should populate (seeded includes Lawn mowing, Leak fix (basic), etc.)
     const serviceSelect = page.locator('select').nth(1);
-    await expect(serviceSelect).toBeVisible();
+    await expect(serviceSelect).toContainText('Leak fix (basic)');
 
     // Choose a known service (Leak fix (basic))
-    await page.selectOption(serviceSelect, { value: 'Leak fix (basic)' });
-    await expect(page).toHaveURL(/service=Leak%20fix%20\(basic\)/);
+    await serviceSelect.selectOption({ value: 'Leak fix (basic)' });
+    await expect(page).toHaveURL(/service=Leak\+fix\+%28basic%29/);
 
     // Trigger a search and ensure at least one result card
     await page.getByRole('button', { name: 'Search' }).click();

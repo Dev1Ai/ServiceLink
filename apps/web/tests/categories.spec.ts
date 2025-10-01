@@ -6,7 +6,7 @@ test.describe('Provider categories page', () => {
     // Heading present
     await expect(page.getByRole('heading', { name: /Provider Categories/i })).toBeVisible();
     // Expect at least one category name from seed to be present
-    await expect(page.getByText(/Home Services|Plumbing|Lawn Care/)).toBeVisible();
+    await expect(page.getByRole('listitem').filter({ hasText: 'Home Services' }).first()).toBeVisible();
 
     // Click the first Search link and verify URL contains category param
     const searchLink = page.locator('a', { hasText: 'Search' }).first();
@@ -28,4 +28,3 @@ test.describe('Provider categories page', () => {
     expect(href2).toMatch(/\?category=/);
   });
 });
-
