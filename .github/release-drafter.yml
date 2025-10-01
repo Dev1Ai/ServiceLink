@@ -1,28 +1,15 @@
-name-template: 'v$NEXT_PATCH_VERSION'
+name-template: 'Release $NEXT_PATCH_VERSION'
 tag-template: 'v$NEXT_PATCH_VERSION'
 categories:
   - title: '🚀 Features'
-    labels:
-      - 'feature'
-      - 'feat'
-      - 'export'
-      - 'security/csp'
-  - title: '🧪 Tests'
-    labels:
-      - 'e2e'
-  - title: '🛠 CI'
-    labels:
-      - 'ci'
-  - title: '🧰 Maintenance'
-    labels:
-      - 'chore'
-  - title: '📝 Docs'
-    labels:
-      - 'docs'
-change-template: '- $TITLE (#$NUMBER) by @$AUTHOR'
-template: |
-  ## Changes
-  $CHANGES
-
-  ## Notes
-  - See RELEASE_NOTES.md for highlights and setup guidance.
+    labels: ['feat']
+  - title: '🐛 Fixes'
+    labels: ['fix']
+  - title: '🧹 Chores'
+    labels: ['chore']
+  - title: '📖 Documentation'
+    labels: ['docs']
+  - title: '✅ Tests'
+    labels: ['test']
+change-template: '- $TITLE by @$AUTHOR in #$NUMBER'
+no-changes-template: 'No user-facing changes in this release.'
