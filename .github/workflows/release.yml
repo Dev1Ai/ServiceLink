@@ -14,7 +14,7 @@ jobs:
         with:
           fetch-depth: 0  # ensure tags are available
 
-      # Draft release notes using release-drafter
+      # Draft release notes from PR labels and commits
       - name: Generate Release Notes
         id: notes
         uses: release-drafter/release-drafter@v5
@@ -41,7 +41,20 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # Update CHANGELOG.md with the same release notes
+      # Always bump package.json version on tag push
+      - name: Auto bump package.json version
+        run: |
+          TAG=${GITHUB_REF_NAME}
+          VERSION=$(echo $TAG | sed -E 's/^m([0-9]+).*/0.\1.0/')
+          echo "New version: $VERSION"
+          jq ".version = \"$VERSION\"" package.json > package.tmp && mv package.tmp package.json
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add package.json
+          git commit -m "chore: bump package.json version to $VERSION" || echo "No changes to commit"
+          git push
+
+      # Sync release notes into CHANGELOG.md
       - name: Update CHANGELOG.md
         run: |
           echo "## Release $GITHUB_REF_NAME" >> CHANGELOG.tmp
@@ -56,22 +69,3 @@ jobs:
           git add CHANGELOG.md
           git commit -m "docs: update CHANGELOG for $GITHUB_REF_NAME" || echo "No changes to commit"
           git push
-
-      # Safety Check Before Version Bump
-      - name: Safety Check Before Version Bump
-        run: |
-          echo "Do you want to bump package.json version for tag $GITHUB_REF_NAME? (y/n)"
-          read ans
-          if [ "$ans" = "y" ]; then
-            TAG=${GITHUB_REF_NAME}
-            VERSION=$(echo $TAG | sed -E 's/^m([0-9]+).*/0.\1.0/')
-            echo "New version: $VERSION"
-            jq ".version = \"$VERSION\"" package.json > package.tmp && mv package.tmp package.json
-            git config user.name "github-actions"
-            git config user.email "actions@github.com"
-            git add package.json
-            git commit -m "chore: bump package.json version to $VERSION" || echo "No changes to commit"
-            git push
-          else
-            echo "Skipping package.json version bump."
-          fi
