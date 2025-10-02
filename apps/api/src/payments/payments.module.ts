@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
-import { StripeWebhookController } from './stripe.controller';
+import { StripeWebhookController as OldStripeWebhookController } from './stripe.controller';
+import { StripeWebhookController } from './stripe-webhook.controller';
 import { PrismaModule } from '../prisma/prisma.module';
 import { ConfigModule } from '@nestjs/config';
 import { PaymentsService } from './payments.service';
@@ -8,7 +9,7 @@ import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [PrismaModule, ConfigModule, AuthModule],
-  controllers: [StripeWebhookController, PaymentsController],
+  controllers: [OldStripeWebhookController, StripeWebhookController, PaymentsController],
   providers: [PaymentsService],
   exports: [PaymentsService],
 })

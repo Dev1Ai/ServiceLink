@@ -146,15 +146,63 @@ model Assignment {
 }
 
 model Payment {
-  id                   String   @id @default(cuid())
-  jobId                String   @unique
-  job                  Job      @relation(fields: [jobId], references: [id])
-  customerId           String
-  customer             User     @relation(fields: [customerId], references: [id])
-  amount               Int
-  currency             String   @default("usd")
-  stripePaymentIntentId String?
-  status               String   @default("requires_capture")
+  id                    String    @id @default(cuid())
+  jobId                 String    @unique
+  job                   Job       @relation(fields: [jobId], references: [id])
+  customerId            String
+  customer              User      @relation(fields: [customerId], references: [id])
+  amount                Int
+  currency              String    @default("usd")
+  stripePaymentIntentId String?   @unique
+  status                String    @default("requires_capture")
+  capturedAt            DateTime?
+  createdAt             DateTime  @default(now())
+  refunds               Refund[]
+
+  @@index([status])
+}
+
+model Refund {
+  id                String   @id @default(cuid())
+  paymentId         String
+  payment           Payment  @relation(fields: [paymentId], references: [id])
+  stripeRefundId    String?
+  amount            Int
+  reason            String?
+  status            String   @default("pending")
+  createdAt         DateTime @default(now())
+  processedAt       DateTime?
+
+  @@index([paymentId])
+  @@index([status])
+}
+
+model Review {
+  id            String   @id @default(cuid())
+  jobId         String
+  raterUserId   String
+  rateeUserId   String
+  stars         Int
+  comment       String?
+  createdAt     DateTime @default(now())
+
+  @@unique([jobId, raterUserId])
+  @@index([rateeUserId])
+}
+
+model Payout {
+  id                String   @id @default(cuid())
+  providerId        String
+  stripeTransferId  String?
+  amount            Int
+  currency          String   @default("usd")
+  status            String   @default("pending")
+  createdAt         DateTime @default(now())
+  processedAt       DateTime?
+  failureReason     String?
+
+  @@index([providerId])
+  @@index([status])
 }
 
 enum ScheduleProposedBy {

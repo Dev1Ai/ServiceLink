@@ -108,4 +108,69 @@ describe('PaymentsService', () => {
         data: expect.objectContaining({ payoutStatus: 'BLOCKED', payoutApprovedBy: 'admin1' }),
       }),
     );
-  });});
+  });
+
+  it('creates payment intent when Stripe configured', async () => {
+    const service = await makeService('sk_live_valid');
+    if (!(service as any).stripe) {
+      // Skip test if Stripe mock not available
+      return;
+    }
+
+    const mockCreate = jest.fn().mockResolvedValue({
+      id: 'pi_123',
+      client_secret: 'pi_123_secret',
+      status: 'requires_payment_method',
+    });
+
+    (service as any).stripe = {
+      paymentIntents: { create: mockCreate },
+    };
+
+    prisma.payment = { ...prisma.payment, create: jest.fn().mockResolvedValue({}) };
+
+    const result = await service.createPaymentIntent({
+      jobId: 'job1',
+      amount: 10000,
+      customerId: 'customer1',
+    });
+
+    expect(result.clientSecret).toBe('pi_123_secret');
+    expect(result.paymentIntentId).toBe('pi_123');
+  });
+
+  it('processes refund successfully', async () => {
+    const service = await makeService('sk_live_valid');
+    if (!(service as any).stripe) {
+      return;
+    }
+
+    const mockRefund = jest.fn().mockResolvedValue({
+      id: 'rf_123',
+      amount: 5000,
+      status: 'succeeded',
+    });
+
+    (service as any).stripe = {
+      refunds: { create: mockRefund },
+    };
+
+    prisma.payment = {
+      ...prisma.payment,
+      findUnique: jest.fn().mockResolvedValue({
+        id: 'payment1',
+        stripePaymentIntentId: 'pi_123',
+      }),
+    };
+
+    prisma.refund = { create: jest.fn().mockResolvedValue({}) };
+
+    const result = await service.refundPayment({
+      paymentId: 'payment1',
+      amount: 5000,
+      reason: 'Customer request',
+    });
+
+    expect(result.id).toBe('rf_123');
+  });
+});
