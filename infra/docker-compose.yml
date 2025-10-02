@@ -1,21 +1,106 @@
-version: '3.8'
+version: '3.9'
+
 services:
   postgres:
     image: postgres:16-alpine
     container_name: servicelink-postgres
+    restart: unless-stopped
+    profiles: ["db", "dev", "obs"]
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: servicelink
     ports:
-      - "5432:5432"
+      - '5432:5432'
     volumes:
       - pgdata:/var/lib/postgresql/data
+
   redis:
     image: redis:7-alpine
     container_name: servicelink-redis
+    restart: unless-stopped
+    profiles: ["db", "dev", "obs"]
+    command: ['redis-server', '--appendonly', 'yes']
     ports:
-      - "6379:6379"
-    command: ["redis-server", "--appendonly", "yes"]
+      - '6379:6379'
+
+  api:
+    image: node:20-alpine
+    container_name: servicelink-api
+    working_dir: /app
+    profiles: ["dev"]
+    volumes:
+      - ..:/app:cached
+    environment:
+      PORT: 3001
+      NODE_ENV: development
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/servicelink
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: change-me
+      STRIPE_RETURN_URL: http://localhost:3000/provider/onboarding/completed
+      STRIPE_REFRESH_URL: http://localhost:3000/provider/onboarding/refresh
+    depends_on:
+      - postgres
+      - redis
+    ports:
+      - '3001:3001'
+    command: >-
+      sh -lc "corepack enable && pnpm i && pnpm --filter api exec prisma db push && pnpm --filter api dev"
+
+  web:
+    image: node:20-alpine
+    container_name: servicelink-web
+    working_dir: /app
+    profiles: ["dev"]
+    volumes:
+      - ..:/app:cached
+    environment:
+      NODE_ENV: development
+      NEXT_PUBLIC_API_BASE_URL: /api
+      ENABLE_STRICT_CSP: 'true'
+      CSP_STRICT_LEVEL: balanced
+    depends_on:
+      - api
+    ports:
+      - '3000:3000'
+    command: >-
+      sh -lc "corepack enable && pnpm i && pnpm --filter web dev -p 3000"
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: servicelink-nginx
+    profiles: ["dev"]
+    depends_on:
+      - api
+      - web
+    ports:
+      - '8080:80'
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: servicelink-prometheus
+    profiles: ["obs"]
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - '9090:9090'
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+
+  grafana:
+    image: grafana/grafana:10.4.11
+    container_name: servicelink-grafana
+    profiles: ["obs"]
+    ports:
+      - '3030:3000'
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_SECURITY_ADMIN_USER: admin
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+
 volumes:
   pgdata:

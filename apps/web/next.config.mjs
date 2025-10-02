@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'export',
+  // Use static export only when explicitly enabled
+  ...(process.env.NEXT_OUTPUT === 'export' ? { output: 'export' } : {}),
   reactStrictMode: true,
-  experimental: { appDir: true }
 };
 export default nextConfig;

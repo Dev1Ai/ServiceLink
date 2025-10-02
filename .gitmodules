@@ -1,0 +1,3 @@
+[submodule "apps/mobile-uber-polished"]
+	path = apps/mobile-uber-polished
+	url = https://github.com/Dev1Ai/react-native-clone-uber.git

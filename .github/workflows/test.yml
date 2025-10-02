@@ -1,0 +1,33 @@
+name: Unit Tests & Lint
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout repo
+      - uses: actions/checkout@v4
+
+      - name: Enable Corepack (pnpm)
+        run: corepack enable pnpm
+
+      # Setup Node with pnpm cache
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+          cache-dependency-path: pnpm-workspace.yaml
+
+      # Install dependencies
+      - run: pnpm install
+
+      # Run lint
+      - run: pnpm lint
+
+      # Run unit tests
+      - run: pnpm test

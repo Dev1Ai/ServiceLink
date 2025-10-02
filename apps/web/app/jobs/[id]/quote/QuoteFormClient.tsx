@@ -1,0 +1,105 @@
+'use client';
+import { useEffect, useState } from 'react';
+import { useLocalToken } from '../../../useLocalToken';
+import { useToast } from '../../../components/Toast';
+
+const API = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
+
+export default function QuoteFormClient({ params }: { params: { id: string } }) {
+  const { id } = params;
+  const isPlaceholder = id === 'example-static';
+  const [token, setToken] = useLocalToken();
+  const [total, setTotal] = useState('150');
+  const [result, setResult] = useState<any>(null);
+  const [cooldownUntil, setCooldownUntil] = useState<number | null>(null);
+  const [, forceTick] = useState(0);
+  const [inlineMsg, setInlineMsg] = useState<string | null>(isPlaceholder ? 'Static export placeholder — use /jobs/quote?id=YOUR_JOB_ID when running from static hosting.' : null);
+  const { push } = useToast();
+
+  useEffect(() => {
+    const id = setInterval(() => forceTick((n) => n + 1), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    if (isPlaceholder) return;
+    try {
+      const raw = localStorage.getItem('quote:submitCooldownUntil');
+      const n = raw ? Number(raw) : 0;
+      if (n > Date.now()) setCooldownUntil(n);
+    } catch {}
+  }, [isPlaceholder]);
+
+  useEffect(() => {
+    if (isPlaceholder) return;
+    try {
+      if (cooldownUntil) localStorage.setItem('quote:submitCooldownUntil', String(cooldownUntil));
+      else localStorage.removeItem('quote:submitCooldownUntil');
+    } catch {}
+  }, [cooldownUntil, isPlaceholder]);
+
+  const cdLeft = cooldownUntil ? Math.max(0, Math.ceil((cooldownUntil - Date.now()) / 1000)) : 0;
+  const disabled = cdLeft > 0 || isPlaceholder;
+
+  const submit = async () => {
+    if (isPlaceholder) {
+      setResult({ ok: false, message: 'Placeholder page in static export. Use /jobs/quote?id=YOUR_JOB_ID.' });
+      setInlineMsg('Static export placeholder — use /jobs/quote?id=YOUR_JOB_ID when hosting the export.');
+      return;
+    }
+    if (disabled) {
+      setResult({ ok: false, status: 429, message: `Cooldown active; wait ~${cdLeft}s` });
+      setInlineMsg(`Rate limited. Please wait ~${cdLeft}s before submitting again.`);
+      push('Rate limited: please wait', 'error');
+      return;
+    }
+    setResult('Submitting...');
+    setInlineMsg(null);
+    const res = await fetch(`${API}/jobs/${id}/quotes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ total: Number(total) }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.status === 429) {
+      const ra = res.headers.get('Retry-After');
+      let ttl = 60;
+      if (ra) {
+        const n = parseInt(ra, 10);
+        if (!isNaN(n)) ttl = n;
+        else {
+          const d = Date.parse(ra);
+          if (!isNaN(d)) ttl = Math.max(1, Math.ceil((d - Date.now()) / 1000));
+        }
+      }
+      const until = Date.now() + ttl * 1000;
+      setCooldownUntil(until);
+      setResult({ ok: false, status: 429, message: `Rate limited; wait ~${ttl}s`, data });
+      setInlineMsg(`Rate limited. Please wait ~${ttl}s before submitting again.`);
+      push(`Quote limited: wait ~${ttl}s`, 'error');
+      return;
+    }
+    setResult({ ok: res.ok, status: res.status, data });
+    if (res.ok) push('Quote submitted', 'success');
+    else push(`Quote failed (${res.status})`, 'error');
+  };
+
+  return (
+    <div className="container">
+      <h2>Provider: Quote Job {isPlaceholder ? '(static placeholder)' : id}</h2>
+      <div className="grid gap-8 max-w-420">
+        <input value={token} onChange={(e) => setToken(e.target.value)} placeholder="paste PROVIDER JWT here" disabled={isPlaceholder} />
+        <input value={total} onChange={(e) => setTotal(e.target.value)} placeholder="total (USD cents)" disabled={isPlaceholder} />
+        {inlineMsg && (
+          <div className="alert alert-error">
+            {inlineMsg}
+          </div>
+        )}
+        <button onClick={submit} disabled={disabled} title={disabled ? (isPlaceholder ? 'Unavailable in static export' : `Submit cooldown: ${cdLeft}s`) : 'Submit quote'}>
+          {isPlaceholder ? 'Unavailable in static export' : disabled ? `Submit Quote (cd ${cdLeft}s)` : 'Submit Quote'}
+        </button>
+      </div>
+      <pre className="pre mt-16">{JSON.stringify(result, null, 2)}</pre>
+    </div>
+  );
+}

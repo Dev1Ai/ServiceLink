@@ -1,18 +1,123 @@
-name: ci
+name: CI
+
 on:
   push:
-    branches: [ main ]
+    branches: ['**']
   pull_request:
-    branches: [ main ]
+    branches: ['**']
+
 jobs:
-  build:
+  build-and-test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: servicelink
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Enable pnpm via Corepack
+        run: corepack enable pnpm
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: pnpm i --frozen-lockfile=false
-      - run: pnpm db:generate
-      - run: pnpm -w build
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Prepare database (generate/push/seed)
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/servicelink
+        run: |
+          pnpm db:generate
+          pnpm db:push
+          pnpm db:seed
+
+      - name: Lint (workspace)
+        run: pnpm run lint
+
+      - name: Typecheck
+        run: pnpm run typecheck
+
+      - name: Test API unit suite
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/servicelink
+        run: pnpm run test
+
+      - name: Prisma schema validation
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/servicelink
+        run: pnpm --filter api exec prisma validate --schema=prisma/schema.prisma
+
+      - name: Build API
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/servicelink
+        run: pnpm --filter api build
+
+      - name: Start API server
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/servicelink
+          JWT_SECRET: test-secret
+          PORT: 3001
+          AUTH_LOGIN_RATE_TTL: 60
+          AUTH_LOGIN_RATE_LIMIT: 5
+          SEARCH_RATE_DISABLE: true
+        run: |
+          node apps/api/dist/main.js &
+          echo $! > api-server.pid
+          for i in $(seq 1 60); do
+            if curl -sf http://localhost:3001/health >/dev/null; then
+              echo "API server is up"; break
+            fi
+            sleep 1
+          done
+
+      - name: Build web (production)
+        env:
+          NEXT_PUBLIC_API_BASE_URL: http://localhost:3001
+          ENABLE_STRICT_CSP: true
+          CSP_ALLOW_HTTP: true
+          SEARCH_RATE_DISABLE: true
+        run: pnpm --filter web build
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps
+
+      - name: E2E (Playwright) – strict CSP smoke tests
+        env:
+          NEXT_PUBLIC_API_BASE_URL: http://localhost:3001
+          ENABLE_STRICT_CSP: true
+          CSP_ALLOW_HTTP: true
+          SEARCH_RATE_DISABLE: true
+        run: pnpm --filter web test:e2e
+
+      - name: Stop API server
+        if: always()
+        run: |
+          if [ -f api-server.pid ]; then
+            kill $(cat api-server.pid) || true
+          fi

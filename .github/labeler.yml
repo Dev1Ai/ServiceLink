@@ -1,0 +1,19 @@
+area:web:
+  - 'apps/web/**'
+area:api:
+  - 'apps/api/**'
+ci:
+  - '.github/workflows/**'
+  - 'infra/**'
+e2e:
+  - 'apps/web/tests/**'
+security/csp:
+  - 'apps/web/middleware.ts'
+  - 'apps/web/app/layout.tsx'
+export:
+  - 'apps/web/app/jobs/quote/page.tsx'
+  - 'apps/web/next.config.mjs'
+docs:
+  - 'README.md'
+  - 'RELEASE_NOTES.md'
+  - 'apps/web/PR_SUMMARY.md'

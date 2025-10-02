@@ -1,10 +1,13 @@
 # Node
 node_modules
 npm-debug.log*
-pnpm-lock.yaml
 dist
 .build
 .next
+.turbo
+.turbo/**
+**/*.log
+**/*.pid
 .expo
 .expo-shared
 .expo/*
@@ -18,3 +21,15 @@ dist
 # Prisma
 prisma/migrations
 .prisma
+
+# Test artifacts
+playwright-report/
+test-results/
+playwright-error.*
+coverage/
+
+# IDE and OS
+.vscode/
+.idea/
+*.swp
+*.swo

@@ -1,0 +1,17 @@
+pr:
+  from: codex/updates
+  to: main
+  append: |
+    ## 📊 Milestone Progress (auto-generated)
+
+    ### ✅ Current Milestone
+    - Number & Name
+    - Completed subtasks
+
+    ### ⚡ Next Milestone
+    - Number & Name
+    - Immediate next steps
+
+    ### 📌 Notes
+    - Blockers / TODOs Codex detected
+
