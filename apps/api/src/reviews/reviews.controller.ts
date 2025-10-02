@@ -13,7 +13,7 @@ export class ReviewsController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a review for a completed job' })
   async createReview(
-    @Request() req,
+    @Request() req: any,
     @Body() body: {
       jobId: string;
       rateeUserId: string;
