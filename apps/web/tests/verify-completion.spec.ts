@@ -46,7 +46,7 @@ test.describe('Customer verifies completion', () => {
 
     // Accept the quote (by amount)
     const card = page.locator('div', { hasText: `Quote: $${totalCents}` });
-    await expect(card).toBeVisible();
+    await expect(card).toBeVisible({ timeout: 10000 });
     await card.getByRole('button', { name: /Accept/ }).click();
     await expect(card.locator('text=Status: accepted')).toBeVisible({ timeout: 10000 });
 

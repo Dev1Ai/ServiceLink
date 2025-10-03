@@ -48,7 +48,6 @@ test.describe('Quotes accept/revoke flow', () => {
 
     // Wait for page to load and quotes to render
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
 
     // Accept the quote: locate the card by the total amount (in dollars)
     const totalDollars = (totalCents / 100).toFixed(2);
