@@ -32,10 +32,22 @@ async function bootstrap() {
   const origins = process.env.CORS_ORIGIN
     ? process.env.CORS_ORIGIN.split(',').map((s) => s.trim()).filter(Boolean)
     : undefined;
+
+  // In production, require explicit CORS_ORIGIN configuration
+  const corsOrigin = origins && origins.length > 0
+    ? origins
+    : process.env.NODE_ENV === 'production'
+      ? false  // Reject all origins if CORS_ORIGIN not set in production
+      : true;  // Allow all in development
+
   app.enableCors({
-    origin: origins && origins.length > 0 ? origins : true,
+    origin: corsOrigin,
     credentials: true,
   });
+
+  if (process.env.NODE_ENV === 'production' && !origins) {
+    console.warn('⚠️  WARNING: CORS_ORIGIN not set in production - all origins rejected');
+  }
 
   const config = new DocumentBuilder()
     .setTitle('ServiceLink API')
