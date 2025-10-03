@@ -5,15 +5,15 @@ test.describe('Rate limiting on login', () => {
 
   test('exceeds login limit and gets 429 with Retry-After', async ({ request }) => {
     const api = process.env.E2E_API_BASE as string;
-    // Default rate limit is 10/min for login, so we need to exceed it
+    // Rate limit is 100/min for login in E2E, so we need to exceed it
     const creds = { email: 'provider@example.com', password: 'password123' };
     const headers = { 'Content-Type': 'application/json' } as any;
 
-    // Make 11 requests rapidly to exceed the 10/min limit
+    // Make 101 requests rapidly to exceed the 100/min limit
     let rateLimitHit = false;
     let retryAfter: string | undefined;
 
-    for (let i = 0; i < 12; i++) {
+    for (let i = 0; i < 102; i++) {
       const response = await request.post(`${api}/auth/login`, { data: creds, headers });
       if (response.status() === 429) {
         rateLimitHit = true;
