@@ -2,6 +2,16 @@
 
 ## ✅ Completed Milestones
 
+### M7 — Mobile App Integration (2025-10-03)
+- Completed subtasks:
+  - Mobile app API client with JWT authentication
+  - Sign-up/sign-in integration with NestJS backend
+  - Job listing and creation from mobile
+  - Type system migration (Job type for API, JobRequest for legacy)
+  - Expo Router proxy routes preserved for mobile-specific features
+  - Environment configuration with .env.example
+  - Rate limiting configured for E2E test compatibility
+
 ### M6 — LLM, STT & RAG (2025-10-03)
 - Completed subtasks:
   - OpenAI GPT-4o integration for structured job intake with JSON schema
@@ -43,18 +53,13 @@
   - Static export-safe job links (fallback routes for quotes/quote form)
 
 ## ⚡ Next Milestone
-- M7 — Mobile App (React Native / Expo)
-- Planning references:
-  - Scope defined in `docs/PLAYBOOK.md` (Week 7)
-  - Key features: Cross-platform mobile app with core marketplace functionality
-- Immediate next steps:
-  - Set up Expo project structure
-  - Implement authentication flow
-  - Build job creation and browsing UI
-  - Add provider search and filtering
-  - Implement real-time chat
-  - Add push notifications
-  - Connect to existing API endpoints
+- M8 — Additional Features & Polish
+- Potential areas:
+  - Fix remaining 5 flaky E2E tests (map rendering, UI timing)
+  - Enhanced mobile features (push notifications, offline support)
+  - Performance optimizations
+  - Additional integrations
+  - Documentation improvements
 
 ## 📌 Notes
 - AI: OpenAI GPT-4o and Whisper integration with PII redaction
@@ -66,4 +71,4 @@
 - CSP: Strict CSP enabled in production (ENABLE_STRICT_CSP=true)
 - Playwright: E2E tests scoped to web package for CI compatibility
 
-Last updated: 2025-10-03 01:40:00Z
+Last updated: 2025-10-03 17:55:00Z
