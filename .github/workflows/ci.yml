@@ -84,7 +84,7 @@ jobs:
           JWT_SECRET: test-secret
           PORT: 3001
           AUTH_LOGIN_RATE_TTL: 60
-          AUTH_LOGIN_RATE_LIMIT: 5
+          AUTH_LOGIN_RATE_LIMIT: 100
           SEARCH_RATE_DISABLE: true
         run: |
           node apps/api/dist/main.js &
