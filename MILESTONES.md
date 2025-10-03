@@ -62,6 +62,14 @@
   - Operations runbook with incident response procedures
   - Rollback procedures documentation with risk assessment matrix
 
+### M8.5 — Production Launch Preparation (2025-10-03)
+- Completed subtasks:
+  - Comprehensive deployment guide (AWS/K8s, Docker, database setup)
+  - Environment setup documentation (quick start, local dev, troubleshooting)
+  - API usage guide with examples (authentication, workflows, code samples)
+  - Production-ready infrastructure documentation
+  - Developer onboarding guide with IDE setup
+
 ## ⚡ Next Milestone
 - M9 — Additional Features & Enhancements
 - Potential areas:
