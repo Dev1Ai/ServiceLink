@@ -475,7 +475,7 @@ export default function QuotesPageClient({ params }: { params: { id: string } })
           const accepted = q.status === 'accepted';
           return (
             <div key={q.id} className={`card ${accepted ? 'bg-accepted' : ''}`}>
-              <div><strong>Quote:</strong> ${'{'}q.total{'}'}</div>
+              <div><strong>Quote:</strong> ${(q.total / 100).toFixed(2)}</div>
               <div><strong>Status:</strong> {q.status}</div>
               <div><strong>Provider:</strong> {q.provider?.user?.name || q.provider?.user?.email || q.providerId}</div>
               <div><strong>Created:</strong> {new Date(q.createdAt).toLocaleString()}</div>
