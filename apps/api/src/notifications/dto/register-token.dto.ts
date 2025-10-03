@@ -2,11 +2,11 @@ import { IsString, IsIn, IsOptional, IsBoolean } from 'class-validator';
 
 export class RegisterTokenDto {
   @IsString()
-  token: string;
+  token!: string;
 
   @IsString()
   @IsIn(['ios', 'android', 'web'])
-  platform: string;
+  platform!: string;
 
   @IsOptional()
   @IsBoolean()
