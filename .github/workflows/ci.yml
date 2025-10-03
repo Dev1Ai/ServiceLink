@@ -83,8 +83,8 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/servicelink
           JWT_SECRET: test-secret
           PORT: 3001
-          AUTH_LOGIN_RATE_TTL: 60
-          AUTH_LOGIN_RATE_LIMIT: 100
+          AUTH_LOGIN_RATE_TTL: 300
+          AUTH_LOGIN_RATE_LIMIT: 1000
           SEARCH_RATE_DISABLE: true
         run: |
           node apps/api/dist/main.js &
