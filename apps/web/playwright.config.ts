@@ -23,7 +23,7 @@ export default defineConfig({
         JWT_SECRET: process.env.E2E_JWT_SECRET ?? 'playwright-secret',
         REMINDER_WORKER_ENABLED: 'false',
         SEARCH_RATE_DISABLE: 'true',
-        AUTH_LOGIN_RATE_LIMIT: process.env.E2E_AUTH_LOGIN_LIMIT ?? '1',
+        AUTH_LOGIN_RATE_LIMIT: process.env.E2E_AUTH_LOGIN_LIMIT ?? '100',
       },
       port: Number(process.env.E2E_API_PORT ?? 3001),
       reuseExistingServer: true,
