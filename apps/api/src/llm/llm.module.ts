@@ -3,9 +3,10 @@ import { LlmService } from './llm.service';
 import { SttService } from './stt.service';
 import { LlmController } from './llm.controller';
 import { ConfigModule } from '@nestjs/config';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
-  imports: [ConfigModule],
+  imports: [ConfigModule, AuthModule],
   controllers: [LlmController],
   providers: [LlmService, SttService],
   exports: [LlmService, SttService],
