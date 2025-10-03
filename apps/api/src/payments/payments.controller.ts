@@ -35,4 +35,36 @@ export class PaymentsController {
     }
     return this.payments.denyPayout(id, req.user.sub);
   }
+
+  @Post('intents')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Create a Stripe PaymentIntent for a job' })
+  async createIntent(@Req() req: AuthedRequest, @Body() body: { jobId: string; amount: number }) {
+    return this.payments.createPaymentIntent({
+      jobId: body.jobId,
+      amount: body.amount,
+      customerId: req.user.sub,
+    });
+  }
+
+  @Post('intents/:id/capture')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Capture a Stripe PaymentIntent' })
+  async captureIntent(@Param('id') paymentIntentId: string) {
+    return this.payments.capturePayment(paymentIntentId);
+  }
+
+  @Post('refunds')
+  @Roles('ADMIN')
+  @ApiOperation({ summary: 'Refund a payment' })
+  async refund(@Body() body: { paymentId: string; amount?: number; reason?: string }) {
+    return this.payments.refundPayment(body);
+  }
+
+  @Post('payouts')
+  @Roles('ADMIN')
+  @ApiOperation({ summary: 'Create a payout to a provider via Stripe Connect' })
+  async createPayout(@Body() body: { providerId: string; amount: number }) {
+    return this.payments.createPayout(body);
+  }
 }

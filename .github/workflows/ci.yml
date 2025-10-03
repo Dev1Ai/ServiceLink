@@ -105,7 +105,7 @@ jobs:
         run: pnpm --filter web build
 
       - name: Install Playwright browsers
-        run: pnpm exec playwright install --with-deps
+        run: pnpm --filter web exec playwright install --with-deps
 
       - name: E2E (Playwright) – strict CSP smoke tests
         env:

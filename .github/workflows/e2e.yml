@@ -79,7 +79,7 @@ jobs:
         run: pnpm --filter web build
 
       - name: Install Playwright browsers
-        run: pnpm exec playwright install --with-deps
+        run: pnpm --filter web exec playwright install --with-deps
 
       - name: Run Playwright tests
         env:
@@ -90,7 +90,7 @@ jobs:
           pnpm exec start-server-and-test \
             "pnpm --filter web start -p 3000" \
             http://localhost:3000 \
-            "pnpm exec playwright test"
+            "pnpm --filter web exec playwright test"
 
       - name: Stop API
         if: always()

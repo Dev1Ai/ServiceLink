@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { AssignmentPayoutStatus } from '@prisma/client';
@@ -8,8 +8,17 @@ const PLACEHOLDER_KEYS = /sk_(?:test|live)_or_test|replace|changeme/i;
 @Injectable()
 export class PaymentsService {
   private readonly logger = new Logger(PaymentsService.name);
+  private stripe: any;
 
-  constructor(private readonly prisma: PrismaService, private readonly config: ConfigService) {}
+  constructor(private readonly prisma: PrismaService, private readonly config: ConfigService) {
+    if (this.hasRealStripeKeys()) {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const Stripe = require('stripe');
+      this.stripe = new Stripe(this.config.get<string>('STRIPE_SECRET_KEY'), {
+        apiVersion: '2024-11-20.acacia',
+      });
+    }
+  }
 
   private hasRealStripeKeys() {
     const secret = this.config.get<string>('STRIPE_SECRET_KEY') || this.config.get<string>('STRIPE_SECRET');
@@ -126,5 +135,117 @@ export class PaymentsService {
     });
     this.logger.log(`Payout ${status.toLowerCase()} for assignment ${assignmentId} by ${adminUserId}`);
     return updated;
+  }
+
+  async createPaymentIntent(data: { jobId: string; amount: number; customerId: string }) {
+    if (!this.stripe) {
+      throw new BadRequestException('Stripe is not configured');
+    }
+
+    const paymentIntent = await this.stripe.paymentIntents.create({
+      amount: data.amount,
+      currency: 'usd',
+      automatic_payment_methods: { enabled: true },
+      metadata: {
+        jobId: data.jobId,
+        customerId: data.customerId,
+      },
+    });
+
+    await this.prisma.payment.create({
+      data: {
+        jobId: data.jobId,
+        customerId: data.customerId,
+        amount: data.amount,
+        currency: 'usd',
+        stripePaymentIntentId: paymentIntent.id,
+        status: paymentIntent.status,
+      },
+    });
+
+    return { clientSecret: paymentIntent.client_secret, paymentIntentId: paymentIntent.id };
+  }
+
+  async capturePayment(paymentIntentId: string) {
+    if (!this.stripe) {
+      throw new BadRequestException('Stripe is not configured');
+    }
+
+    const paymentIntent = await this.stripe.paymentIntents.capture(paymentIntentId);
+
+    await this.prisma.payment.update({
+      where: { stripePaymentIntentId: paymentIntentId },
+      data: {
+        status: paymentIntent.status,
+        capturedAt: new Date(),
+      },
+    });
+
+    return paymentIntent;
+  }
+
+  async refundPayment(data: { paymentId: string; amount?: number; reason?: string }) {
+    if (!this.stripe) {
+      throw new BadRequestException('Stripe is not configured');
+    }
+
+    const payment = await this.prisma.payment.findUnique({
+      where: { id: data.paymentId },
+    });
+
+    if (!payment || !payment.stripePaymentIntentId) {
+      throw new BadRequestException('Payment not found or not processed through Stripe');
+    }
+
+    const refund = await this.stripe.refunds.create({
+      payment_intent: payment.stripePaymentIntentId,
+      amount: data.amount,
+      reason: data.reason,
+    });
+
+    await this.prisma.refund.create({
+      data: {
+        paymentId: payment.id,
+        stripeRefundId: refund.id,
+        amount: refund.amount,
+        reason: data.reason,
+        status: refund.status,
+      },
+    });
+
+    return refund;
+  }
+
+  async createPayout(data: { providerId: string; amount: number }) {
+    if (!this.stripe) {
+      throw new BadRequestException('Stripe is not configured');
+    }
+
+    const provider = await this.prisma.provider.findUnique({
+      where: { id: data.providerId },
+    });
+
+    if (!provider || !provider.stripeAccountId) {
+      throw new BadRequestException('Provider not found or Stripe Connect not set up');
+    }
+
+    const transfer = await this.stripe.transfers.create({
+      amount: data.amount,
+      currency: 'usd',
+      destination: provider.stripeAccountId,
+    });
+
+    await this.prisma.payout.create({
+      data: {
+        providerId: data.providerId,
+        stripeTransferId: transfer.id,
+        amount: data.amount,
+        currency: 'usd',
+        status: 'processing',
+        processedAt: new Date(),
+      },
+    });
+
+    return transfer;
   }
 }
