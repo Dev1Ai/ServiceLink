@@ -12,12 +12,22 @@ test.describe('Scheduling workflow', () => {
   test('customer proposes schedule, provider confirms then rejects', async ({ page, request }) => {
     const api = process.env.E2E_API_BASE as string;
 
-    const custLogin = await request.post(`${api}/auth/login`, {
-      data: { email: 'customer@example.com', password: 'password123' },
-      headers: { 'Content-Type': 'application/json' },
-    });
-    expect(custLogin.ok()).toBeTruthy();
-    const custToken = (await custLogin.json()).access_token as string;
+    const login = async (email: string) => {
+      const response = await request.post(`${api}/auth/login`, {
+        data: { email, password: 'password123' },
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const bodyText = await response.text();
+      expect(response.ok(), `Login failed for ${email} (${response.status()}): ${bodyText}`).toBeTruthy();
+      try {
+        const parsed = JSON.parse(bodyText);
+        return parsed.access_token as string;
+      } catch (error) {
+        throw new Error(`Failed to parse login response for ${email}: ${bodyText}`);
+      }
+    };
+
+    const custToken = await login('customer@example.com');
 
     const jobRes = await request.post(`${api}/jobs`, {
       data: { title: `schedule-${Date.now()}`, description: 'schedule flow test' },
@@ -27,12 +37,7 @@ test.describe('Scheduling workflow', () => {
     const job = await jobRes.json();
     expect(job?.id).toBeTruthy();
 
-    const provLogin = await request.post(`${api}/auth/login`, {
-      data: { email: 'provider@example.com', password: 'password123' },
-      headers: { 'Content-Type': 'application/json' },
-    });
-    expect(provLogin.ok()).toBeTruthy();
-    const provToken = (await provLogin.json()).access_token as string;
+    const provToken = await login('provider@example.com');
 
     const quoteRes = await request.post(`${api}/jobs/${encodeURIComponent(job.id)}/quotes`, {
       data: { total: 33300 },

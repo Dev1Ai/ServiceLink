@@ -3,17 +3,25 @@ import { test, expect } from '@playwright/test';
 test.describe('Realtime chat flow', () => {
   test.skip(!process.env.E2E_API_BASE, 'E2E_API_BASE not set');
 
-  test('connects, joins room, sends message', async ({ page, request }) => {
-    const api = process.env.E2E_API_BASE as string;
-    // Login to get JWT
-    const res = await request.post(`${api}/auth/login`, {
-      data: { email: 'provider@example.com', password: 'password123' },
+test('connects, joins room, sends message', async ({ page, request }) => {
+  const api = process.env.E2E_API_BASE as string;
+
+  const login = async (email: string) => {
+    const response = await request.post(`${api}/auth/login`, {
+      data: { email, password: 'password123' },
       headers: { 'Content-Type': 'application/json' },
     });
-    expect(res.ok()).toBeTruthy();
-    const body = await res.json();
-    const token = body.access_token as string;
-    expect(token).toBeTruthy();
+    const bodyText = await response.text();
+    expect(response.ok(), `Login failed for ${email} (${response.status()}): ${bodyText}`).toBeTruthy();
+    try {
+      const parsed = JSON.parse(bodyText);
+      return parsed.access_token as string;
+    } catch (error) {
+      throw new Error(`Failed to parse login response for ${email}: ${bodyText}`);
+    }
+  };
+
+  const token = await login('provider@example.com');
 
     // Inject token
     await page.addInitScript((t) => {
@@ -42,4 +50,3 @@ test.describe('Realtime chat flow', () => {
     await expect(page.getByText(msg)).toBeVisible({ timeout: 10000 });
   });
 });
-

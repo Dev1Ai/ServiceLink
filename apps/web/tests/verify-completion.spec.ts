@@ -6,13 +6,22 @@ test.describe('Customer verifies completion', () => {
   test('accept then verify completion', async ({ page, request }) => {
     const api = process.env.E2E_API_BASE as string;
 
-    // Login as customer and create a job
-    const custLogin = await request.post(`${api}/auth/login`, {
-      data: { email: 'customer@example.com', password: 'password123' },
-      headers: { 'Content-Type': 'application/json' },
-    });
-    expect(custLogin.ok()).toBeTruthy();
-    const custToken = (await custLogin.json()).access_token as string;
+    const login = async (email: string) => {
+      const response = await request.post(`${api}/auth/login`, {
+        data: { email, password: 'password123' },
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const bodyText = await response.text();
+      expect(response.ok(), `Login failed for ${email} (${response.status()}): ${bodyText}`).toBeTruthy();
+      try {
+        const parsed = JSON.parse(bodyText);
+        return parsed.access_token as string;
+      } catch (error) {
+        throw new Error(`Failed to parse login response for ${email}: ${bodyText}`);
+      }
+    };
+
+    const custToken = await login('customer@example.com');
 
     const createJob = await request.post(`${api}/jobs`, {
       data: { title: `e2e-verify-${Date.now()}`, description: 'verify completion flow' },
@@ -23,12 +32,7 @@ test.describe('Customer verifies completion', () => {
     expect(job?.id).toBeTruthy();
 
     // Login as provider and submit a quote
-    const provLogin = await request.post(`${api}/auth/login`, {
-      data: { email: 'provider@example.com', password: 'password123' },
-      headers: { 'Content-Type': 'application/json' },
-    });
-    expect(provLogin.ok()).toBeTruthy();
-    const provToken = (await provLogin.json()).access_token as string;
+    const provToken = await login('provider@example.com');
 
     const totalCents = 33333;
     const createQuote = await request.post(`${api}/jobs/${encodeURIComponent(job.id)}/quotes`, {
