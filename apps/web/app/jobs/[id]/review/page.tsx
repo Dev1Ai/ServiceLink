@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 
-export default function ReviewPage({ params }: { params: { id: string } }) {
+export default function ReviewPage({ params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = use(params);
   const router = useRouter();
   const [stars, setStars] = useState(5);
   const [comment, setComment] = useState('');
@@ -24,7 +25,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
           Authorization: `Bearer ${localStorage.getItem('token')}`,
         },
         body: JSON.stringify({
-          jobId: params.id,
+          jobId: resolvedParams.id,
           rateeUserId,
           stars,
           comment,
@@ -35,7 +36,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
         throw new Error('Failed to submit review');
       }
 
-      router.push(`/jobs/${params.id}`);
+      router.push(`/jobs/${resolvedParams.id}`);
     } catch (err: any) {
       setError(err.message);
     } finally {
