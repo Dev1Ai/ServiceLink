@@ -24,11 +24,12 @@ model User {
   status    String   @default("active")
   createdAt DateTime @default(now())
 
-  profile   Profile?
-  provider  Provider?
-  jobs      Job[]         @relation("UserJobs")
-  messages  ChatMessage[]
-  payments  Payment[]
+  profile             Profile?
+  provider            Provider?
+  jobs                Job[]                @relation("UserJobs")
+  messages            ChatMessage[]
+  payments            Payment[]
+  notificationTokens  NotificationToken[]
 }
 
 model Profile {
@@ -238,4 +239,23 @@ model KnowledgeBase {
   updatedAt   DateTime               @updatedAt
 
   @@index([category])
+}
+
+model NotificationToken {
+  id                      String   @id @default(cuid())
+  userId                  String
+  user                    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token                   String   @unique
+  platform                String   // 'ios', 'android', 'web'
+  notifyNewJobs           Boolean  @default(true)
+  notifyNewQuotes         Boolean  @default(true)
+  notifyQuoteAccepted     Boolean  @default(true)
+  notifyJobCompleted      Boolean  @default(true)
+  notifyPaymentReceived   Boolean  @default(true)
+  notifyReminders         Boolean  @default(true)
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  @@index([userId])
+  @@index([platform])
 }
