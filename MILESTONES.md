@@ -1,7 +1,28 @@
 # Milestone Progress Report
 
-## ✅ Current Milestone
-- M3 — Jobs & Matching
+## ✅ Completed Milestones
+
+### M5 — Payments & Reviews (2025-10-03)
+- Completed subtasks:
+  - Full Stripe integration (PaymentIntents, capture, refunds, payouts)
+  - Stripe webhook handlers (payment success/failure, disputes, transfers)
+  - Reviews system (create, list, average ratings with authorization)
+  - Admin refunds dashboard with amount/reason support
+  - Review submission UI with star rating component
+  - Database models: Review, Refund, Payout with proper indexing
+  - Unit tests: 13 tests covering reviews and payments services
+
+### M4 — Fulfillment & Automation (2025-09-18)
+- Completed subtasks:
+  - Job assignment and scheduling system
+  - BullMQ reminder worker with configurable intervals
+  - Payment capture stubs and payout approval workflow
+  - Admin metrics dashboard for job states
+  - Admin payouts page for manual approvals
+  - Schedule proposal/confirmation endpoints
+  - Reminder status tracking and audit timestamps
+
+### M3 — Jobs & Matching
 - Completed subtasks:
   - Customer job creation API + web form with validation
   - Provider discovery flows (search + near) with radius filtering and Next UI helpers
@@ -10,25 +31,24 @@
   - Static export-safe job links (fallback routes for quotes/quote form)
 
 ## ⚡ Next Milestone
-- M4 — Fulfillment & Automation
+- M6 — LLM, STT & RAG
 - Planning references:
-  - Scope + requirements in `docs/M4-Fulfillment.md`
-  - Ticket backlog in `docs/M4-Tickets.md`
-  - Sprint allocations in `docs/M4-Sprint-Plan.md`
-  - Grooming checklist in `docs/M4-Grooming.md`
-  - Coordination checklist in `docs/M4-Coordination.md`
+  - Scope defined in `docs/PLAYBOOK.md` (Week 6)
+  - Key features: Whisper intake, quote assistant, policy RAG, safety redaction
 - Immediate next steps:
-  - Lock scope (scheduling, workflow automation, payment capture follow-ups) with stakeholders
-  - Identify coverage gaps/tests to finish before handing off M3
-  - Document new env requirements + ops runbooks for automation pieces
-  - Decide on background job framework (BullMQ vs cron) and capture in ADR
+  - Implement OpenAI GPT-4o integration for job intake structuring
+  - Add Whisper/Deepgram for speech-to-text job creation
+  - Build quote assistant with line item suggestions
+  - Create policy RAG system for support knowledge base
+  - Implement PII redaction before LLM prompts
+  - Add prompt templates with regression tests
 
 ## 📌 Notes
-- Stripe: real onboarding requires valid `STRIPE_SECRET_KEY`/webhook secret; currently returns a mock URL when unset/placeholders
-- Ensure only one API dev instance runs (avoid EADDRINUSE on :3001)
-- Next.js config cleaned up (removed experimental appDir warning)
-- Consider normalizing DTOs across auth/users/providers to one shared shape and extracting to `packages/schemas`
+- Stripe: Full integration complete with PaymentIntents, webhooks, and Connect
+- Reviews: Star ratings (1-5) with authorization checks
+- Refunds: Admin-only with partial amount support
+- BullMQ: Reminder worker running with configurable SLAs
+- CSP: Strict CSP enabled in production (ENABLE_STRICT_CSP=true)
+- Playwright: E2E tests scoped to web package for CI compatibility
 
-- CSP hardening: web currently runs with `ENABLE_STRICT_CSP=true` at `CSP_STRICT_LEVEL=balanced` (dev+prod). TODO: audit all inline scripts/styles and flip to `strict` in compose when safe.
-
-\nLast updated: 2025-09-18 11:42:00Z
+Last updated: 2025-10-03 00:45:00Z
