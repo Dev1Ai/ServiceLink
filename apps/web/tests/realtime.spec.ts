@@ -12,7 +12,10 @@ test('connects, joins room, sends message', async ({ page, request }) => {
       headers: { 'Content-Type': 'application/json' },
     });
     const bodyText = await response.text();
-    expect(response.ok(), `Login failed for ${email} (${response.status()}): ${bodyText}`).toBeTruthy();
+    if (!response.ok()) {
+      console.error(`Login failed for ${email} (${response.status()}): ${bodyText}`);
+      throw new Error(`Login failed for ${email}`);
+    }
     try {
       const parsed = JSON.parse(bodyText);
       return parsed.access_token as string;
