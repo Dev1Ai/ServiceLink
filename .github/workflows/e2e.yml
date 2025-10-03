@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:16
+        image: pgvector/pgvector:pg16
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -64,7 +64,7 @@ jobs:
           JWT_SECRET: test-secret
           PORT: 3001
           AUTH_LOGIN_RATE_TTL: 60
-          AUTH_LOGIN_RATE_LIMIT: 5
+          AUTH_LOGIN_RATE_LIMIT: 100
         run: |
           pnpm --filter api start &
           echo $! > api.pid
