@@ -45,7 +45,7 @@ export class LlmService {
       // Redact PII before sending to LLM
       const redactedInput = this.redactPII(userInput);
 
-      const completion = await this.openai.beta.chat.completions.parse({
+      const completion = await this.openai.chat.completions.create({
         model: 'gpt-4o-2024-08-06',
         messages: [
           {
@@ -107,12 +107,13 @@ Flag any safety or complexity risks you identify.`,
         },
       });
 
-      const parsed = completion.choices[0]?.message?.parsed;
-      if (!parsed) {
-        this.logger.warn('No parsed response from OpenAI');
+      const content = completion.choices[0]?.message?.content;
+      if (!content) {
+        this.logger.warn('No response from OpenAI');
         return null;
       }
 
+      const parsed = JSON.parse(content);
       return JobIntakeSchema.parse(parsed);
     } catch (error: any) {
       this.logger.error(`Error structuring job intake: ${error.message}`, error.stack);
