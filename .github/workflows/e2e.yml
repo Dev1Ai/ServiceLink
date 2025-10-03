@@ -65,6 +65,7 @@ jobs:
           PORT: 3001
           AUTH_LOGIN_RATE_TTL: 60
           AUTH_LOGIN_RATE_LIMIT: 100
+          SEARCH_RATE_DISABLE: true
         run: |
           pnpm --filter api start &
           echo $! > api.pid
