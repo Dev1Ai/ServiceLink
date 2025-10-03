@@ -10,7 +10,17 @@ import { InjectThrottlerStorage, ThrottlerStorage } from '@nestjs/throttler';
 
 type JwtPayload = { sub: string; role: string; email?: string };
 
-@WebSocketGateway({ namespace: '/ws', cors: { origin: true, credentials: true } })
+@WebSocketGateway({
+  namespace: '/ws',
+  cors: {
+    origin: process.env.CORS_ORIGIN
+      ? process.env.CORS_ORIGIN.split(',').map((s: string) => s.trim()).filter(Boolean)
+      : process.env.NODE_ENV === 'production'
+        ? false
+        : true,
+    credentials: true,
+  },
+})
 export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer() server!: Server;
   private readonly logger = new Logger(RealtimeGateway.name);

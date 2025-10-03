@@ -31,9 +31,9 @@ test.describe('Providers Near shows nearby provider', () => {
     // Expect at least one provider card to show
     await expect(page.locator('.card').first()).toBeVisible({ timeout: 10000 });
 
-    // And at least one map marker icon is rendered - wait for map to fully initialize
-    await page.waitForTimeout(2000); // Allow time for map tiles and markers to load
-    const markerCount = await page.locator('.leaflet-marker-icon').count();
+    // Wait for map markers to render (CircleMarker renders as SVG with .leaflet-interactive)
+    await expect(page.locator('.leaflet-interactive').first()).toBeVisible({ timeout: 15000 });
+    const markerCount = await page.locator('.leaflet-interactive').count();
     expect(markerCount, 'At least one map marker should be present').toBeGreaterThan(0);
   });
 });
