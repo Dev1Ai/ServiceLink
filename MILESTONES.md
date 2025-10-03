@@ -52,14 +52,24 @@
   - Realtime job chat persisted to Prisma with history fetch in web demo
   - Static export-safe job links (fallback routes for quotes/quote form)
 
+### M8 — Production Hardening (2025-10-03)
+- Completed subtasks:
+  - Fixed 5 flaky E2E tests (replaced arbitrary waits with proper Playwright patterns)
+  - Security audit with comprehensive hardening (CORS, dependencies, PII)
+  - CORS production enforcement (requires explicit CORS_ORIGIN in production)
+  - Dependency updates (Next.js CVE fixes, reduced vulnerabilities from 19 to 9)
+  - Load testing guide with k6 scripts and performance benchmarks
+  - Operations runbook with incident response procedures
+  - Rollback procedures documentation with risk assessment matrix
+
 ## ⚡ Next Milestone
-- M8 — Additional Features & Polish
+- M9 — Additional Features & Enhancements
 - Potential areas:
-  - Fix remaining 5 flaky E2E tests (map rendering, UI timing)
   - Enhanced mobile features (push notifications, offline support)
-  - Performance optimizations
-  - Additional integrations
-  - Documentation improvements
+  - Advanced search filters (price range, availability, ratings)
+  - Provider analytics dashboard
+  - Customer loyalty program
+  - Multi-language support (i18n)
 
 ## 📌 Notes
 - AI: OpenAI GPT-4o and Whisper integration with PII redaction
@@ -71,4 +81,8 @@
 - CSP: Strict CSP enabled in production (ENABLE_STRICT_CSP=true)
 - Playwright: E2E tests scoped to web package for CI compatibility
 
-Last updated: 2025-10-03 17:55:00Z
+- Security: Grade A- with CORS hardening, dependency updates, comprehensive audit
+- Documentation: RUNBOOK.md, ROLLBACK.md, LOAD-TESTING.md, SECURITY-AUDIT.md
+- E2E Tests: All tests stable with proper Playwright waiting patterns
+
+Last updated: 2025-10-03 19:30:00Z
