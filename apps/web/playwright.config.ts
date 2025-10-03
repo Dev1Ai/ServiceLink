@@ -26,7 +26,7 @@ export default defineConfig({
         AUTH_LOGIN_RATE_LIMIT: process.env.E2E_AUTH_LOGIN_LIMIT ?? '1',
       },
       port: Number(process.env.E2E_API_PORT ?? 3001),
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: true,
       timeout: 180 * 1000,
     },
     {
@@ -41,7 +41,7 @@ export default defineConfig({
         NEXT_PUBLIC_API_BASE_URL: process.env.E2E_API_BASE ?? 'http://127.0.0.1:3001',
       },
       port: 3100,
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: true,
       timeout: 120 * 1000,
     },
   ],
