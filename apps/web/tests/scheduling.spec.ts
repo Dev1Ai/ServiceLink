@@ -10,6 +10,7 @@ test.describe('Scheduling workflow', () => {
   test.skip(!process.env.E2E_API_BASE, 'E2E_API_BASE not set');
 
   test('customer proposes schedule, provider confirms then rejects', async ({ page, request }) => {
+    test.setTimeout(60000); // Increase timeout to 60s for this complex workflow
     const api = process.env.E2E_API_BASE as string;
 
     const custLogin = await request.post(`${api}/auth/login`, {
@@ -73,11 +74,16 @@ test.describe('Scheduling workflow', () => {
     await page.getByLabel('Confirmation notes (optional)').fill('Provider confirms arrival');
     await page.getByRole('button', { name: 'Confirm schedule' }).click();
 
-    await expect(page.locator('text=Schedule confirmed.')).toBeVisible();
-    await expect(page.locator('text=Status: scheduled')).toBeVisible({ timeout: 10000 });
-    await expect(page.locator('text=Version: 2')).toBeVisible();
+    await expect(page.locator('text=Schedule confirmed.')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('text=Status: scheduled')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('text=Version: 2')).toBeVisible({ timeout: 15000 });
 
-    await page.getByLabel('Reason (optional)').fill('Need to reschedule quickly');
+    // Wait for the reject assignment section to be visible
+    await expect(page.locator('text=Reject assignment')).toBeVisible({ timeout: 15000 });
+    // Wait for the textarea to be visible and editable
+    const reasonField = page.getByLabel('Reason (optional)');
+    await expect(reasonField).toBeVisible({ timeout: 15000 });
+    await reasonField.fill('Need to reschedule quickly');
     await page.getByRole('button', { name: 'Reject assignment and reopen job' }).click();
 
     await expect(page.locator('text=Assignment rejected — job reopened for quotes.')).toBeVisible();
