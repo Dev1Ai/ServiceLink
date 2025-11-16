@@ -86,8 +86,9 @@ test.describe('Scheduling workflow', () => {
     await expect(page.locator('text=Status: scheduled')).toBeVisible({ timeout: 15000 });
     await expect(page.locator('text=Version: 2')).toBeVisible({ timeout: 15000 });
 
-    // Wait a moment for React to re-render the reject assignment section after confirmation
-    await page.waitForTimeout(1000);
+    // Click refresh button to reload assignment data and show reject assignment section
+    await page.getByRole('button', { name: 'Refresh' }).click();
+    await expect(page.locator('text=Status: scheduled')).toBeVisible({ timeout: 15000 });
 
     // Wait for the reject assignment section to be visible (provider role required)
     await expect(page.locator('text=Reject assignment')).toBeVisible({ timeout: 15000 });
