@@ -1,19 +1,26 @@
 area:web:
-  - 'apps/web/**'
+  - changed-files:
+      - any-glob-to-any-file: 'apps/web/**'
 area:api:
-  - 'apps/api/**'
+  - changed-files:
+      - any-glob-to-any-file: 'apps/api/**'
 ci:
-  - '.github/workflows/**'
-  - 'infra/**'
+  - changed-files:
+      - any-glob-to-any-file: '.github/workflows/**'
+      - any-glob-to-any-file: 'infra/**'
 e2e:
-  - 'apps/web/tests/**'
+  - changed-files:
+      - any-glob-to-any-file: 'apps/web/tests/**'
 security/csp:
-  - 'apps/web/middleware.ts'
-  - 'apps/web/app/layout.tsx'
+  - changed-files:
+      - any-glob-to-any-file: 'apps/web/middleware.ts'
+      - any-glob-to-any-file: 'apps/web/app/layout.tsx'
 export:
-  - 'apps/web/app/jobs/quote/page.tsx'
-  - 'apps/web/next.config.mjs'
+  - changed-files:
+      - any-glob-to-any-file: 'apps/web/app/jobs/quote/page.tsx'
+      - any-glob-to-any-file: 'apps/web/next.config.mjs'
 docs:
-  - 'README.md'
-  - 'RELEASE_NOTES.md'
-  - 'apps/web/PR_SUMMARY.md'
+  - changed-files:
+      - any-glob-to-any-file: 'README.md'
+      - any-glob-to-any-file: 'RELEASE_NOTES.md'
+      - any-glob-to-any-file: 'apps/web/PR_SUMMARY.md'
