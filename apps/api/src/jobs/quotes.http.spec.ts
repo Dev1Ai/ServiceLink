@@ -11,6 +11,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { QuotesService } from './quotes.service';
 import { AssignmentsService } from './assignments.service';
 import { PaymentsService } from '../payments/payments.service';
+import { JobsService } from './jobs.service';
 import type { AuthedRequest } from '../common/types/request';
 
 describe('Jobs/Quotes HTTP (E2E-lite)', () => {
@@ -32,6 +33,7 @@ describe('Jobs/Quotes HTTP (E2E-lite)', () => {
       providers: [
         { provide: PrismaService, useValue: prisma },
         { provide: MetricsService, useValue: metrics },
+        { provide: JobsService, useValue: { createJob: jest.fn() } },
         NotificationsService,
         { provide: AssignmentsService, useValue: { proposeScheduleAsCustomer: jest.fn() } },
         { provide: PaymentsService, useValue: payments },
