@@ -4,6 +4,7 @@ export async function generateStaticParams() {
   return [{ id: 'example-static' }];
 }
 
-export default function QuotesPage({ params }: { params: { id: string } }) {
-  return <QuotesPageClient params={params} />;
+export default async function QuotesPage({ params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = await params;
+  return <QuotesPageClient params={resolvedParams} />;
 }
