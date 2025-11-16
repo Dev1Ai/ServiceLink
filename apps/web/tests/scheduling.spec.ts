@@ -86,6 +86,10 @@ test.describe('Scheduling workflow', () => {
     await expect(page.locator('text=Status: scheduled')).toBeVisible({ timeout: 15000 });
     await expect(page.locator('text=Version: 2')).toBeVisible({ timeout: 15000 });
 
+    // Reload page to ensure reject assignment section renders with fresh assignment data
+    await page.reload();
+    await expect(page.locator('text=Status: scheduled')).toBeVisible({ timeout: 15000 });
+
     // Wait for the reject assignment section to be visible
     await expect(page.locator('text=Reject assignment')).toBeVisible({ timeout: 15000 });
     // Wait for the textarea to be visible and editable

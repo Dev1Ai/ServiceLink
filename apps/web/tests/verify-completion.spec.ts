@@ -44,8 +44,9 @@ test.describe('Customer verifies completion', () => {
 
     await page.goto(`/jobs/${encodeURIComponent(job.id)}/quotes`);
 
-    // Accept the quote (by amount)
-    const card = page.locator('div', { hasText: `Quote: $${totalCents}` });
+    // Accept the quote (by amount - displayed as dollars, e.g., $333.33 for 33333 cents)
+    const displayedAmount = (totalCents / 100).toFixed(2);
+    const card = page.locator('div').filter({ hasText: `Quote: $${displayedAmount}` });
     await expect(card).toBeVisible({ timeout: 10000 });
     await card.getByRole('button', { name: /Accept/ }).click();
     await expect(card.locator('text=Status: accepted')).toBeVisible({ timeout: 10000 });
