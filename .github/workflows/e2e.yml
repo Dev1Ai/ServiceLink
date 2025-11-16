@@ -61,19 +61,37 @@ jobs:
       - name: Start API
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/servicelink
+          REDIS_URL: redis://localhost:6379
           JWT_SECRET: test-secret
           PORT: 3001
           AUTH_LOGIN_RATE_TTL: 60
           AUTH_LOGIN_RATE_LIMIT: 100
+          JOBS_RATE_TTL: 60
+          JOBS_RATE_LIMIT: 100
+          QUOTES_RATE_TTL: 60
+          QUOTES_RATE_LIMIT: 100
+          PROVIDERS_RATE_TTL: 60
+          PROVIDERS_RATE_LIMIT: 100
+          SEARCH_RATE_TTL: 60
+          SEARCH_RATE_LIMIT: 100
+          SEARCH_RATE_DISABLE: false
         run: |
           pnpm --filter api start &
           echo $! > api.pid
+          # Wait for health endpoint
           for i in {1..60}; do
             if curl -sf http://localhost:3001/health >/dev/null; then
               echo "API server is up"; break
             fi
             sleep 1
           done
+          # Additional wait to ensure API is fully ready to accept auth requests
+          sleep 3
+          # Verify auth endpoint is responsive
+          echo "Testing auth endpoint availability..."
+          curl -sf -X POST http://localhost:3001/auth/login \
+            -H "Content-Type: application/json" \
+            -d '{"email":"test@test.com","password":"wrong"}' || echo "Auth endpoint check complete"
 
       - name: Build web
         run: pnpm --filter web build
