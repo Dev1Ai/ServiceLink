@@ -65,15 +65,15 @@ jobs:
           JWT_SECRET: test-secret
           PORT: 3001
           AUTH_LOGIN_RATE_TTL: 60
-          AUTH_LOGIN_RATE_LIMIT: 100
+          AUTH_LOGIN_RATE_LIMIT: 1000
           JOBS_RATE_TTL: 60
-          JOBS_RATE_LIMIT: 100
+          JOBS_RATE_LIMIT: 1000
           QUOTES_RATE_TTL: 60
-          QUOTES_RATE_LIMIT: 100
+          QUOTES_RATE_LIMIT: 1000
           PROVIDERS_RATE_TTL: 60
-          PROVIDERS_RATE_LIMIT: 100
+          PROVIDERS_RATE_LIMIT: 1000
           SEARCH_RATE_TTL: 60
-          SEARCH_RATE_LIMIT: 100
+          SEARCH_RATE_LIMIT: 1000
           SEARCH_RATE_DISABLE: false
         run: |
           # Start API and redirect logs to file for debugging
