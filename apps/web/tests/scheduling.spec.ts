@@ -86,6 +86,10 @@ test.describe('Scheduling workflow', () => {
     await expect(page.locator('text=Status: scheduled')).toBeVisible({ timeout: 15000 });
     await expect(page.locator('text=Version: 2')).toBeVisible({ timeout: 15000 });
 
+    // Wait a moment for the load() function to complete and component to re-render
+    // After schedule confirmation, the component calls load() which may take a moment
+    await page.waitForTimeout(2000);
+
     // Wait for the reject assignment button (provider role required)
     // It should appear automatically after schedule confirmation for provider role
     const rejectBtn = page.getByRole('button', { name: 'Reject assignment and reopen job' });
