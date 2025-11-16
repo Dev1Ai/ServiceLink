@@ -1,12 +1,13 @@
 #!/usr/bin/env node
-import { writeFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { writeFileSync } from "node:fs";
+import { resolve } from "node:path";
 
-const title = process.env.TITLE || 'ServiceLink';
-const subtitle = process.env.SUBTITLE || 'Find trusted local providers for home services';
-const outDir = resolve(process.cwd(), 'apps/marketing/public');
-const svgPath = resolve(outDir, 'og.svg');
-const pngPath = resolve(outDir, 'og.png');
+const title = process.env.TITLE || "ServiceLink";
+const subtitle =
+  process.env.SUBTITLE || "Find trusted local providers for home services";
+const outDir = resolve(process.cwd(), "apps/marketing/public");
+const svgPath = resolve(outDir, "og.svg");
+const pngPath = resolve(outDir, "og.png");
 
 const svg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
@@ -27,11 +28,15 @@ writeFileSync(svgPath, svg);
 console.log(`Wrote ${svgPath}`);
 
 try {
-  const { Resvg } = await import('@resvg/resvg-js');
-  const png = new Resvg(svg, { fitTo: { mode: 'width', value: 1200 } }).render().asPng();
+  const { Resvg } = await import("@resvg/resvg-js");
+  const png = new Resvg(svg, { fitTo: { mode: "width", value: 1200 } })
+    .render()
+    .asPng();
   writeFileSync(pngPath, png);
   console.log(`Wrote ${pngPath}`);
 } catch (e) {
-  console.warn('[og] PNG conversion skipped (optional):', e?.message || String(e));
+  console.warn(
+    "[og] PNG conversion skipped (optional):",
+    e?.message || String(e),
+  );
 }
-

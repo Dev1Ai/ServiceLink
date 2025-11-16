@@ -2,10 +2,7 @@
   "compilerOptions": {
     "target": "ES2021",
     "module": "CommonJS",
-    "lib": [
-      "ES2021",
-      "DOM"
-    ],
+    "lib": ["ES2021", "DOM"],
     "moduleResolution": "Node",
     "strict": true,
     "esModuleInterop": true,
@@ -13,9 +10,7 @@
     "resolveJsonModule": true,
     "baseUrl": ".",
     "paths": {
-      "@schemas/*": [
-        "packages/schemas/src/*"
-      ]
+      "@schemas/*": ["packages/schemas/src/*"]
     }
   }
 }

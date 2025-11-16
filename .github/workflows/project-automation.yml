@@ -4,10 +4,10 @@ permissions:
   contents: write
   issues: write
   pull-requests: write
-  repository-projects: write
+  projects: write
 
 on:
-  workflow_dispatch: {}
+  workflow_dispatch:
   issues:
     types: [opened, labeled, reopened, closed]
   pull_request:
@@ -19,38 +19,23 @@ jobs:
     steps:
       - name: Debug GitHub token permissions
         run: |
-          echo "🔎 Checking token scopes..."
+          echo "🔍 Checking token scopes..."
           curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" https://api.github.com/rate_limit
           echo "✅ If this call succeeds, the token is valid."
-          echo "🔎 Checking repo permissions from GitHub context..."
-          echo '${{ toJson(github.permissions) }}'
+          echo "🔍 Checking repo permissions from GitHub context..."
+          echo "${{ toJson(github.permissions) }}"
 
   auto-label:
-    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-    env:
-      BRANCH_NAME: ${{ github.head_ref }}
     steps:
-      - name: Auto-apply milestone labels
-        uses: actions-ecosystem/action-add-labels@v1
+      - uses: actions/labeler@v5
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          labels: |
-            ${{ startsWith(env.BRANCH_NAME, 'm0') || contains(env.BRANCH_NAME, 'bootstrap') && 'm0' || '' }}
-            ${{ startsWith(env.BRANCH_NAME, 'm1') || contains(env.BRANCH_NAME, 'auth') && 'm1' || '' }}
-            ${{ startsWith(env.BRANCH_NAME, 'm2') || contains(env.BRANCH_NAME, 'categories') && 'm2' || '' }}
-            ${{ startsWith(env.BRANCH_NAME, 'm3') || contains(env.BRANCH_NAME, 'availability') && 'm3' || '' }}
-            ${{ startsWith(env.BRANCH_NAME, 'm4') || contains(env.BRANCH_NAME, 'quotes') && 'm4' || '' }}
-            ${{ startsWith(env.BRANCH_NAME, 'm5') || contains(env.BRANCH_NAME, 'payments') && 'm5' || '' }}
-            ${{ startsWith(env.BRANCH_NAME, 'm6') || contains(env.BRANCH_NAME, 'llm') && 'm6' || '' }}
-            ${{ startsWith(env.BRANCH_NAME, 'm7') || contains(env.BRANCH_NAME, 'beta') && 'm7' || '' }}
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
   add-to-project:
     runs-on: ubuntu-latest
-    needs: debug-token
     steps:
-      - name: Add item to Project Board
-        uses: actions/add-to-project@v0.5.0
+      - uses: actions/add-to-project@v0.5.0
         with:
           project-url: https://github.com/orgs/${{ github.repository_owner }}/projects/1
           github-token: ${{ secrets.GITHUB_TOKEN }}

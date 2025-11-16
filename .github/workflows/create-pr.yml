@@ -1,0 +1,44 @@
+name: Create PR (from branch)
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Source branch to open PR from"
+        required: true
+        default: "feat/export-csp-e2e"
+      title:
+        description: "PR title"
+        required: true
+        default: "Web: Fix export SSR, enforce strict CSP, remove inline styles, and add E2E"
+      body:
+        description: "PR body (optional)"
+        required: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  create_pr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { branch, title, body } = context.payload.inputs;
+            const [owner, repo] = process.env.GITHUB_REPOSITORY.split('/');
+            // Check if PR already exists
+            const prs = await github.rest.pulls.list({ owner, repo, state: 'open', head: `${owner}:${branch}` });
+            if (prs.data.length) {
+              core.info(`PR already exists: #${prs.data[0].number}`);
+              return;
+            }
+            const pr = await github.rest.pulls.create({ owner, repo, title, head: branch, base: 'main', body: body || '' });
+            core.info(`Created PR #${pr.data.number}`);

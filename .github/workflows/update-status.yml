@@ -1,0 +1,56 @@
+name: Update Project Status
+
+on:
+  issues:
+    types: [closed, reopened]
+  pull_request:
+    types: [closed, reopened, merged]
+
+jobs:
+  update-status:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
+          npm install -g gh
+
+      - name: Update PROJECT_STATUS.md milestones + ETA
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "# Project Status (Auto-Updated)" > PROJECT_STATUS.md
+          echo "" >> PROJECT_STATUS.md
+          echo "## Last Updated" >> PROJECT_STATUS.md
+          date >> PROJECT_STATUS.md
+          echo "" >> PROJECT_STATUS.md
+
+          echo "## Milestones" >> PROJECT_STATUS.md
+          gh issue list --state all --limit 20 --json number,title,state | \
+            jq -r '.[] | if .state == "CLOSED" then "- [x] " + .title else "- [ ] " + .title end' >> PROJECT_STATUS.md
+          echo "" >> PROJECT_STATUS.md
+
+          echo "## Pull Requests" >> PROJECT_STATUS.md
+          gh pr list --state all --limit 10 --json number,title,state | \
+            jq -r '.[] | "- " + .title + " (" + .state + ")"' >> PROJECT_STATUS.md
+          echo "" >> PROJECT_STATUS.md
+
+          echo "## ETA Estimation" >> PROJECT_STATUS.md
+          avg_days=$(gh issue list --state closed --limit 10 --json closedAt,createdAt | jq -r '[.[].closedAt as $c | .createdAt as $o | (($c | fromdateiso8601) - ($o | fromdateiso8601))/86400] | add / length')
+          if [ "$avg_days" != "null" ]; then
+            echo "Average time to close (last 10 issues): $avg_days days" >> PROJECT_STATUS.md
+            echo "Projected completion: $(date -d "+$avg_days days" +%Y-%m-%d)" >> PROJECT_STATUS.md
+          else
+            echo "Not enough data to project ETA" >> PROJECT_STATUS.md
+          fi
+
+      - name: Commit and push changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add PROJECT_STATUS.md
+          git commit -m "chore: auto-update PROJECT_STATUS.md with milestones + ETA [skip ci]" || echo "No changes to commit"
+          git push

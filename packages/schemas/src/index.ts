@@ -1,11 +1,11 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 export const ProviderStatusSchema = z.object({
   providerId: z.string(),
   online: z.boolean(),
   lat: z.number().optional(),
   lng: z.number().optional(),
-  at: z.string().datetime().optional()
+  at: z.string().datetime().optional(),
 });
 
 export const JobIntakeSchema = z.object({
@@ -13,7 +13,7 @@ export const JobIntakeSchema = z.object({
   description: z.string().min(5),
   address: z.string().optional(),
   mediaUrls: z.array(z.string().url()).optional(),
-  requiresQuote: z.boolean().default(true)
+  requiresQuote: z.boolean().default(true),
 });
 
 export type ProviderStatus = z.infer<typeof ProviderStatusSchema>;

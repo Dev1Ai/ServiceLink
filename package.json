@@ -1,27 +1,35 @@
 {
   "name": "servicelink-monorepo",
+  "version": "1.0.0",
   "private": true,
-  "packageManager": "pnpm@9.0.0",
   "scripts": {
     "dev": "turbo run dev --parallel",
-    "build": "turbo run build",
     "lint": "turbo run lint",
-    "test": "turbo run test",
-    "db:migrate": "prisma migrate dev --name init",
-    "db:generate": "prisma generate",
-    "db:seed": "tsx prisma/seed.ts"
+    "format": "prettier --write .",
+    "db:generate": "pnpm --filter api exec prisma generate --schema=prisma/schema.prisma",
+    "db:push": "pnpm --filter api exec prisma db push --schema=prisma/schema.prisma",
+    "db:seed": "pnpm --filter api exec prisma db seed --schema=prisma/schema.prisma",
+    "db:reset": "pnpm --filter api prisma migrate reset --force --skip-generate --skip-seed && pnpm db:seed",
+    "test": "pnpm --filter api test",
+    "e2e": "pnpm exec playwright install && pnpm exec playwright test",
+    "dev:e2e": "start-server-and-test \"pnpm --filter web dev -p 3000\" http://localhost:3000 \"pnpm exec playwright test\"",
+    "setup:e2e": "pnpm exec playwright install --with-deps",
+    "setup:all": "pnpm install && pnpm --filter web build && pnpm run setup:e2e",
+    "typecheck": "turbo run typecheck",
+    "check": "npm run lint && npm run typecheck && npm run test && pnpm exec prisma validate && pnpm exec playwright install --with-deps && pnpm --filter web build && pnpm --filter web exec playwright test",
+    "dev:mobile-polished": "cd apps/mobile-uber-polished && pnpm expo start",
+    "build:mobile-polished": "cd apps/mobile-uber-polished && pnpm expo build",
+    "test:mobile-polished": "cd apps/mobile-uber-polished && pnpm exec jest",
+    "lint:fix": "pnpm exec eslint apps/api apps/web apps/mobile-uber-polished --ext .js,.jsx,.ts,.tsx --fix",
+    "check:ci": "pnpm run lint && pnpm run typecheck && pnpm run test && pnpm --filter api exec prisma validate && pnpm exec playwright install --with-deps && pnpm --filter web build && pnpm --filter web exec playwright test",
+    "ci:local": "pnpm run check:ci"
   },
   "devDependencies": {
-    "turbo": "2.1.2",
-    "typescript": "5.6.2",
-    "ts-node": "10.9.2",
-    "tsx": "4.15.7",
-    "eslint": "9.8.0",
-    "prettier": "3.3.3",
-    "dotenv": "16.4.5",
-    "prisma": "5.17.0"
+    "eslint-import-resolver-typescript": "^4.4.4",
+    "prettier": "^3.0.0",
+    "start-server-and-test": "^2.1.1",
+    "turbo": "latest",
+    "typescript": "^5.0.0"
   },
-  "dependencies": {
-    "@prisma/client": "5.17.0"
-  }
+  "packageManager": "pnpm@9.0.0"
 }

@@ -1,0 +1,8 @@
+{
+  "framework": "nextjs",
+  "buildCommand": "pnpm i --frozen-lockfile=false && pnpm --filter web build",
+  "installCommand": "pnpm i --frozen-lockfile=false",
+  "env": {
+    "ENABLE_STRICT_CSP": "true"
+  }
+}

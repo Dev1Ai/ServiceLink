@@ -1,4 +1,4 @@
-import 'dotenv/config';
+import "dotenv/config";
 export default {
   expo: {
     name: "ServiceLink",
@@ -6,7 +6,7 @@ export default {
     scheme: "servicelink",
     version: "0.1.0",
     orientation: "portrait",
-    platforms: ["ios","android","web"],
+    platforms: ["ios", "android", "web"],
     sdkVersion: "51.0.0",
-  }
+  },
 };

@@ -2,10 +2,10 @@ name: Marketing Deploy (S3)
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
     paths:
-      - 'apps/marketing/**'
-      - '.github/workflows/marketing-deploy.yml'
+      - "apps/marketing/**"
+      - ".github/workflows/marketing-deploy.yml"
 
 jobs:
   deploy:

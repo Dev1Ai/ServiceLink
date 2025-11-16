@@ -1,0 +1,101 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "links": [],
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "HTTP Request Duration (p95)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p95"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Logins by Role (rate)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum(rate(auth_login_total{role=~\"$role\"}[5m])) by (role)",
+          "legendFormat": "{{role}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Signups by Role (rate)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [
+        {
+          "expr": "sum(rate(auth_signup_total{role=~\"$role\"}[5m])) by (role)",
+          "legendFormat": "{{role}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "WS Chat Messages by Room (rate)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "targets": [
+        {
+          "expr": "sum(rate(ws_chat_send_total{room=~\"$room\"}[5m])) by (room)",
+          "legendFormat": "{{room}}"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Total WS Connects",
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 16 },
+      "targets": [{ "expr": "sum(ws_connect_total)" }]
+    },
+    {
+      "type": "timeseries",
+      "title": "WS Typing Events (rate)",
+      "gridPos": { "h": 6, "w": 18, "x": 6, "y": 16 },
+      "targets": [
+        {
+          "expr": "sum(rate(ws_typing_total[5m])) by (room)",
+          "legendFormat": "{{room}}"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["servicelink"],
+  "templating": {
+    "list": [
+      {
+        "type": "query",
+        "name": "role",
+        "hide": 0,
+        "datasource": "Prometheus",
+        "refresh": 1,
+        "includeAll": true,
+        "multi": true,
+        "query": "label_values(auth_login_total, role)",
+        "current": { "text": "All", "value": ".*" }
+      },
+      {
+        "type": "query",
+        "name": "room",
+        "hide": 0,
+        "datasource": "Prometheus",
+        "refresh": 1,
+        "includeAll": true,
+        "multi": true,
+        "query": "label_values(ws_chat_send_total, room)",
+        "current": { "text": "All", "value": ".*" }
+      }
+    ]
+  },
+  "time": { "from": "now-6h", "to": "now" },
+  "timezone": ""
+}

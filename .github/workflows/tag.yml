@@ -1,0 +1,26 @@
+name: Create Tag (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "Semver bump (patch|minor|major)"
+        required: true
+        default: "patch"
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create tag
+        uses: anothrNick/github-tag-action@1.73.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WITH_V: true
+          DEFAULT_BUMP: ${{ github.event.inputs.bump }}
+          RELEASE_BRANCHES: main

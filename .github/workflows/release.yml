@@ -1,0 +1,71 @@
+name: Create Release from Tag
+
+on:
+  push:
+    tags:
+      - "*" # runs on every pushed tag
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # ensure tags are available
+
+      # Draft release notes from PR labels and commits
+      - name: Generate Release Notes
+        id: notes
+        uses: release-drafter/release-drafter@v5
+        with:
+          config-name: release-drafter.yml
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Create GitHub Release
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          body: |
+            🚀 Milestone Release: **${{ github.ref_name }}**
+
+            ## Changes in this milestone
+            ${{ steps.notes.outputs.release_body }}
+
+            ---
+            🔗 See commit history:
+            https://github.com/${{ github.repository }}/commits/${{ github.ref_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Always bump package.json version on tag push
+      - name: Auto bump package.json version
+        run: |
+          TAG=${GITHUB_REF_NAME}
+          VERSION=$(echo $TAG | sed -E 's/^m([0-9]+).*/0.\1.0/')
+          echo "New version: $VERSION"
+          jq ".version = \"$VERSION\"" package.json > package.tmp && mv package.tmp package.json
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add package.json
+          git commit -m "chore: bump package.json version to $VERSION" || echo "No changes to commit"
+          git push
+
+      # Sync release notes into CHANGELOG.md
+      - name: Update CHANGELOG.md
+        run: |
+          echo "## Release $GITHUB_REF_NAME" >> CHANGELOG.tmp
+          echo "" >> CHANGELOG.tmp
+          echo "${{ steps.notes.outputs.release_body }}" >> CHANGELOG.tmp
+          echo "" >> CHANGELOG.tmp
+          cat CHANGELOG.md >> CHANGELOG.tmp || true
+          mv CHANGELOG.tmp CHANGELOG.md
+
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add CHANGELOG.md
+          git commit -m "docs: update CHANGELOG for $GITHUB_REF_NAME" || echo "No changes to commit"
+          git push

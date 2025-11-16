@@ -1,0 +1,130 @@
+name: Codex Review, Staging Deploy & Cleanup
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, closed]
+  workflow_dispatch:
+
+jobs:
+  codex-review:
+    name: 🤖 Codex AI Code Review
+    runs-on: ubuntu-latest
+    if: github.event.action != 'closed'
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: 🧩 Checkout Repository
+        uses: actions/checkout@v4
+      - name: 🧠 Run Codex Review
+        uses: openai/codex-action@v1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          context: "diff"
+      - name: 💬 Post Codex Summary
+        run: |
+          echo "✅ Codex AI Review complete for PR #${{ github.event.pull_request.number }}"
+          echo "Feedback added to PR."
+
+  vercel-deploy:
+    name: 🌐 Deploy Web (Next.js) to Vercel
+    runs-on: ubuntu-latest
+    needs: codex-review
+    if: contains(github.event.pull_request.labels.*.name, 'AI Reviewed')
+    steps:
+      - uses: actions/checkout@v4
+      - name: 🚀 Deploy to Vercel (Preview)
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          cd apps/web
+          npx vercel deploy \
+            --token=$VERCEL_TOKEN \
+            --scope=$VERCEL_ORG_ID \
+            --yes --confirm \
+            --build-env NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }} \
+            --env CLERK_SECRET_KEY=${{ secrets.CLERK_SECRET_KEY }} \
+            --name "web-${{ github.event.pull_request.number }}" \
+            --prod=false \
+            > vercel_url.txt
+          echo "VERCEL_PREVIEW_URL=$(grep -o 'https://[^ ]*' vercel_url.txt | head -n 1)" >> $GITHUB_ENV
+
+  render-deploy:
+    name: 🔧 Deploy API (NestJS) to Render
+    runs-on: ubuntu-latest
+    needs: codex-review
+    if: contains(github.event.pull_request.labels.*.name, 'AI Reviewed')
+    steps:
+      - uses: actions/checkout@v4
+      - name: 🚀 Trigger Render Deploy
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+        run: |
+          curl -X POST "https://api.render.com/v1/services/${{ secrets.RENDER_SERVICE_ID }}/deploys" \
+            -H "Accept: application/json" \
+            -H "Authorization: Bearer $RENDER_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d '{"clearCache":true}'
+
+  post-comment:
+    name: 📝 Comment with Staging Links
+    runs-on: ubuntu-latest
+    needs: [vercel-deploy, render-deploy]
+    permissions:
+      pull-requests: write
+    if: github.event.action != 'closed'
+    steps:
+      - name: 💬 Post PR Comment
+        uses: actions/github-script@v7
+        env:
+          VERCEL_PREVIEW_URL: ${{ env.VERCEL_PREVIEW_URL }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const pr = context.payload.pull_request;
+            const vercelUrl = process.env.VERCEL_PREVIEW_URL || "Vercel URL pending...";
+            const renderUrl = "https://api-feature-" + pr.number + ".onrender.com";
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              body: `✅ **Codex Review Complete**
+
+🌐 **Web Preview (Vercel)**: ${vercelUrl}
+
+🔧 **API Preview (Render)**: ${renderUrl}
+
+Review your live staging environment before merging.`
+            });
+
+  cleanup:
+    name: 🧹 Cleanup Staging Deployments
+    runs-on: ubuntu-latest
+    if: github.event.action == 'closed'
+    steps:
+      - name: 🗑️ Delete Vercel Preview
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          echo "Deleting Vercel preview for PR #${{ github.event.pull_request.number }}"
+          vercelProjects=$(npx vercel ls --token=$VERCEL_TOKEN --scope=$VERCEL_ORG_ID --json)
+          branch="web-${{ github.event.pull_request.number }}"
+          id=$(echo $vercelProjects | jq -r ".projects[] | select(.name==\"$branch\") | .id")
+          if [ ! -z "$id" ]; then
+            curl -X DELETE "https://api.vercel.com/v9/projects/$id" \
+              -H "Authorization: Bearer $VERCEL_TOKEN"
+          fi
+      - name: 🗑️ Trigger Render Cleanup
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+        run: |
+          echo "Triggering Render cleanup for PR #${{ github.event.pull_request.number }}"
+          curl -X DELETE "https://api.render.com/v1/services/${{ secrets.RENDER_SERVICE_ID }}/deploys" \
+            -H "Authorization: Bearer $RENDER_API_KEY" \
+            -H "Accept: application/json"

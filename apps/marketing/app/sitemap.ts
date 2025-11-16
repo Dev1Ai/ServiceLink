@@ -1,7 +1,7 @@
-import type { MetadataRoute } from 'next';
+import type { MetadataRoute } from "next";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const base = 'https://servicelink.example';
+  const base = "https://servicelink.example";
   const lastModified = new Date();
   return [
     { url: `${base}/`, lastModified },
@@ -9,4 +9,3 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${base}/privacy`, lastModified },
   ];
 }
-

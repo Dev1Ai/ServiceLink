@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 export function MarketingAnalytics() {
   const plausibleDomain = process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN;
@@ -6,12 +6,13 @@ export function MarketingAnalytics() {
   return (
     <>
       {plausibleDomain && (
-        <script defer data-domain={plausibleDomain} src="https://plausible.io/js/script.js"></script>
+        <script
+          defer
+          data-domain={plausibleDomain}
+          src="https://plausible.io/js/script.js"
+        ></script>
       )}
-      {gaId && (
-        <script defer data-ga-id={gaId} src="/ga.js"></script>
-      )}
+      {gaId && <script defer data-ga-id={gaId} src="/ga.js"></script>}
     </>
   );
 }
-

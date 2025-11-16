@@ -2,10 +2,10 @@ name: Marketing Deploy (GitHub Pages)
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
     paths:
-      - 'apps/marketing/**'
-      - '.github/workflows/marketing-pages.yml'
+      - "apps/marketing/**"
+      - ".github/workflows/marketing-pages.yml"
 
 permissions:
   contents: read
@@ -13,7 +13,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: 'pages'
+  group: "pages"
   cancel-in-progress: true
 
 jobs:
