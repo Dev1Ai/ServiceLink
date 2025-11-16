@@ -17,7 +17,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   if (!isStaticExport) {
     try {
       const { headers } = await import('next/headers');
-      nonce = headers().get('x-nonce') ?? undefined;
+      const headersList = await headers();
+      nonce = headersList.get('x-nonce') ?? undefined;
     } catch {
       nonce = undefined;
     }
