@@ -51,6 +51,11 @@
   - Quote lifecycle: provider submit/list, customer accept/revoke, assignment sync, notifications
   - Realtime job chat persisted to Prisma with history fetch in web demo
   - Static export-safe job links (fallback routes for quotes/quote form)
+  - JobsService integration with centralized PII redaction (PR #23 - Nov 2025)
+    - Centralized job creation through JobsService
+    - Automatic PII redaction for CUSTOMER role
+    - Payment verification flow integration
+    - 96/96 unit tests passing, 20/21 E2E tests passing
 
 ### M8 — Production Hardening (2025-10-03)
 - Completed subtasks:
@@ -93,4 +98,17 @@
 - Documentation: RUNBOOK.md, ROLLBACK.md, LOAD-TESTING.md, SECURITY-AUDIT.md
 - E2E Tests: All tests stable with proper Playwright waiting patterns
 
-Last updated: 2025-10-03 19:30:00Z
+## 🚀 Current Work (November 2025)
+- **Active PRs:**
+  - PR #23: JobsService integration with PII redaction (ready for review)
+  - PR #24: Fixed labeler config schema (Codex automation)
+- **Repository Status:**
+  - All milestones M3-M8.5 complete
+  - Test coverage: 96/96 unit tests, 20/21 E2E tests passing
+  - E2E infrastructure hardened (rate limiting, diagnostics)
+  - 1 flaky scheduling test documented and skipped
+- **Next Steps:**
+  - Merge pending PRs (requires manual approval)
+  - Consider M9 enhancements or prepare for production launch
+
+Last updated: 2025-11-16 22:15:00Z
