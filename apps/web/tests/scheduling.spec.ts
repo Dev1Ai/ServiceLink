@@ -17,6 +17,10 @@ test.describe('Scheduling workflow', () => {
       data: { email: 'customer@example.com', password: 'password123' },
       headers: { 'Content-Type': 'application/json' },
     });
+    if (!custLogin.ok()) {
+      const errorBody = await custLogin.text();
+      console.error(`Login failed with status ${custLogin.status()}: ${errorBody}`);
+    }
     expect(custLogin.ok()).toBeTruthy();
     const custToken = (await custLogin.json()).access_token as string;
 
@@ -32,6 +36,10 @@ test.describe('Scheduling workflow', () => {
       data: { email: 'provider@example.com', password: 'password123' },
       headers: { 'Content-Type': 'application/json' },
     });
+    if (!provLogin.ok()) {
+      const errorBody = await provLogin.text();
+      console.error(`Provider login failed with status ${provLogin.status()}: ${errorBody}`);
+    }
     expect(provLogin.ok()).toBeTruthy();
     const provToken = (await provLogin.json()).access_token as string;
 
