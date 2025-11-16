@@ -86,17 +86,16 @@ test.describe('Scheduling workflow', () => {
     await expect(page.locator('text=Status: scheduled')).toBeVisible({ timeout: 15000 });
     await expect(page.locator('text=Version: 2')).toBeVisible({ timeout: 15000 });
 
-    // Click refresh button to reload assignment data and show reject assignment section
-    await page.getByRole('button', { name: 'Refresh' }).click();
-    await expect(page.locator('text=Status: scheduled')).toBeVisible({ timeout: 15000 });
+    // Wait for the reject assignment button (provider role required)
+    // It should appear automatically after schedule confirmation for provider role
+    const rejectBtn = page.getByRole('button', { name: 'Reject assignment and reopen job' });
+    await expect(rejectBtn).toBeVisible({ timeout: 15000 });
 
-    // Wait for the reject assignment section to be visible (provider role required)
-    await expect(page.locator('text=Reject assignment')).toBeVisible({ timeout: 15000 });
-    // Wait for the textarea to be visible and editable
-    const reasonField = page.getByLabel('Reason (optional)');
+    // Fill in rejection reason
+    const reasonField = page.getByLabel('Reason (optional)').last();  // Use .last() to get the reject reason field, not schedule notes
     await expect(reasonField).toBeVisible({ timeout: 15000 });
     await reasonField.fill('Need to reschedule quickly');
-    await page.getByRole('button', { name: 'Reject assignment and reopen job' }).click();
+    await rejectBtn.click();
 
     await expect(page.locator('text=Assignment rejected — job reopened for quotes.')).toBeVisible();
     await expect(page.locator('text=Status: provider_rejected')).toBeVisible({ timeout: 10000 });

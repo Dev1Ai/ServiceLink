@@ -57,8 +57,7 @@ test.describe('Customer verifies completion', () => {
     await verifyBtn.click();
 
     // Expect a toast or the "Verified:" text to appear
-    const toast = page.getByText('Completion verified').first();
-    await expect(toast.or(page.locator('text=Verified:').first())).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Completion verified').first()).toBeVisible({ timeout: 10000 });
 
     // Additionally confirm via API that assignment status is customer_verified
     const jobRes = await request.get(`${api}/jobs/${encodeURIComponent(job.id)}`);
