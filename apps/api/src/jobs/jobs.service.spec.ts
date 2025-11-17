@@ -1,10 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { JobsService } from './jobs.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { PiiService } from '../pii/pii.service';
 
 describe('JobsService', () => {
   let service: JobsService;
   let prisma: PrismaService;
+  let pii: PiiService;
 
   const prismaMock = {
     job: {
@@ -12,16 +14,22 @@ describe('JobsService', () => {
     },
   };
 
+  const piiMock = {
+    redact: jest.fn().mockImplementation((text: string) => text), // By default, no redaction
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         JobsService,
         { provide: PrismaService, useValue: prismaMock },
+        { provide: PiiService, useValue: piiMock },
       ],
     }).compile();
 
     service = module.get<JobsService>(JobsService);
     prisma = module.get<PrismaService>(PrismaService);
+    pii = module.get<PiiService>(PiiService);
     jest.clearAllMocks();
   });
 
@@ -39,6 +47,7 @@ describe('JobsService', () => {
 
       const job = await service.createJob(dto, customerId);
 
+      expect(pii.redact).toHaveBeenCalledWith(dto.description);
       expect(prisma.job.create).toHaveBeenCalledWith({
         data: {
           key: expect.stringMatching(/^job_/),
@@ -67,6 +76,44 @@ describe('JobsService', () => {
       const key2 = calls[1][0].data.key;
 
       expect(key1).not.toBe(key2);
+    });
+
+    it('should redact PII from job description', async () => {
+      const dto = {
+        title: 'Fix my toilet',
+        description: 'Please call me at 555-123-4567 or email john@example.com',
+      };
+      const customerId = 'customer-1';
+
+      // Mock PII service to redact email and phone
+      piiMock.redact.mockReturnValueOnce('Please call me at [REDACTED_PHONE] or email [REDACTED_EMAIL]');
+
+      const job = await service.createJob(dto, customerId);
+
+      expect(pii.redact).toHaveBeenCalledWith(dto.description);
+      expect(prisma.job.create).toHaveBeenCalledWith({
+        data: {
+          key: expect.stringMatching(/^job_/),
+          title: dto.title,
+          description: 'Please call me at [REDACTED_PHONE] or email [REDACTED_EMAIL]',
+          customerId: customerId,
+        },
+      });
+
+      expect(job.description).toBe('Please call me at [REDACTED_PHONE] or email [REDACTED_EMAIL]');
+    });
+
+    it('should handle descriptions with no PII', async () => {
+      const dto = {
+        title: 'Paint living room',
+        description: 'Need two coats of white paint on all walls',
+      };
+      const customerId = 'customer-1';
+
+      const job = await service.createJob(dto, customerId);
+
+      expect(pii.redact).toHaveBeenCalledWith(dto.description);
+      expect(job.description).toBe(dto.description);
     });
   });
 });

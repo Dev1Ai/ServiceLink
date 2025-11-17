@@ -44,8 +44,9 @@ test.describe('Customer verifies completion', () => {
 
     await page.goto(`/jobs/${encodeURIComponent(job.id)}/quotes`);
 
-    // Accept the quote (by amount)
-    const card = page.locator('div', { hasText: `Quote: $${totalCents}` });
+    // Accept the quote (by amount - displayed as dollars, e.g., $333.33 for 33333 cents)
+    const displayedAmount = (totalCents / 100).toFixed(2);
+    const card = page.locator('.card').filter({ hasText: `Quote: $${displayedAmount}` }).first();
     await expect(card).toBeVisible({ timeout: 10000 });
     await card.getByRole('button', { name: /Accept/ }).click();
     await expect(card.locator('text=Status: accepted')).toBeVisible({ timeout: 10000 });
@@ -56,8 +57,7 @@ test.describe('Customer verifies completion', () => {
     await verifyBtn.click();
 
     // Expect a toast or the "Verified:" text to appear
-    const toast = page.getByText('Completion verified');
-    await expect(toast.or(page.locator('text=Verified:'))).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Completion verified').first()).toBeVisible({ timeout: 10000 });
 
     // Additionally confirm via API that assignment status is customer_verified
     const jobRes = await request.get(`${api}/jobs/${encodeURIComponent(job.id)}`);

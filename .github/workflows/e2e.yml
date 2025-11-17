@@ -61,13 +61,28 @@ jobs:
       - name: Start API
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/servicelink
+          REDIS_URL: redis://localhost:6379
           JWT_SECRET: test-secret
           PORT: 3001
           AUTH_LOGIN_RATE_TTL: 60
-          AUTH_LOGIN_RATE_LIMIT: 100
+          AUTH_LOGIN_RATE_LIMIT: 1000
+          JOBS_RATE_TTL: 60
+          JOBS_RATE_LIMIT: 1000
+          QUOTES_RATE_TTL: 60
+          QUOTES_RATE_LIMIT: 1000
+          PROVIDERS_RATE_TTL: 60
+          PROVIDERS_RATE_LIMIT: 1000
+          SEARCH_RATE_TTL: 60
+          SEARCH_RATE_LIMIT: 1000
+          SEARCH_RATE_DISABLE: false
         run: |
-          pnpm --filter api start &
+          # Start API and redirect logs to file for debugging
+          pnpm --filter api start > api.log 2>&1 &
           echo $! > api.pid
+          API_PID=$(cat api.pid)
+          echo "API started with PID: $API_PID"
+
+          # Wait for health endpoint
           for i in {1..60}; do
             if curl -sf http://localhost:3001/health >/dev/null; then
               echo "API server is up"; break
@@ -75,11 +90,55 @@ jobs:
             sleep 1
           done
 
+          # Verify API process is still running
+          if ! kill -0 $API_PID 2>/dev/null; then
+            echo "ERROR: API process died after startup!"
+            echo "API logs:"
+            cat api.log
+            exit 1
+          fi
+
+          # Additional wait to ensure API is fully ready to accept auth requests
+          sleep 3
+
+          # Verify auth endpoint is responsive with actual credentials
+          echo "Testing auth endpoint with valid credentials..."
+          AUTH_RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" -X POST http://localhost:3001/auth/login \
+            -H "Content-Type: application/json" \
+            -d '{"email":"customer@example.com","password":"password123"}')
+          HTTP_STATUS=$(echo "$AUTH_RESPONSE" | grep HTTP_STATUS | cut -d: -f2)
+          echo "Auth endpoint returned status: $HTTP_STATUS"
+          if [ "$HTTP_STATUS" != "200" ] && [ "$HTTP_STATUS" != "201" ]; then
+            echo "WARNING: Auth endpoint not returning success status"
+            echo "Response: $AUTH_RESPONSE"
+          fi
+
       - name: Build web
         run: pnpm --filter web build
 
       - name: Install Playwright browsers
         run: pnpm --filter web exec playwright install --with-deps
+
+      - name: Verify API server before tests
+        run: |
+          API_PID=$(cat api.pid)
+          echo "Checking API process (PID: $API_PID)..."
+          if ! kill -0 $API_PID 2>/dev/null; then
+            echo "ERROR: API process is not running!"
+            echo "API logs:"
+            cat api.log
+            exit 1
+          fi
+          echo "API process is running"
+
+          # Verify API is still responsive
+          if ! curl -sf http://localhost:3001/health >/dev/null; then
+            echo "ERROR: API health endpoint not responding!"
+            echo "API logs:"
+            cat api.log
+            exit 1
+          fi
+          echo "API health check passed"
 
       - name: Run Playwright tests
         env:
@@ -91,6 +150,24 @@ jobs:
             "pnpm --filter web start -p 3000" \
             http://localhost:3000 \
             "pnpm --filter web exec playwright test"
+
+      - name: Show API logs on test failure
+        if: failure()
+        run: |
+          echo "=== API Server Logs ==="
+          cat api.log || echo "No API logs found"
+          echo ""
+          echo "=== API Process Status ==="
+          if [ -f api.pid ]; then
+            API_PID=$(cat api.pid)
+            if kill -0 $API_PID 2>/dev/null; then
+              echo "API process is still running (PID: $API_PID)"
+            else
+              echo "API process is NOT running (last PID: $API_PID)"
+            fi
+          else
+            echo "No api.pid file found"
+          fi
 
       - name: Stop API
         if: always()

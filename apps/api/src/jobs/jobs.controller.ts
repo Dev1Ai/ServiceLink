@@ -6,6 +6,7 @@ import { JwtAuthGuard, Roles, RolesGuard } from '../auth/jwt.guard';
 import { CreateJobDto, CreateQuoteDto, JobDto, QuoteDto, QuoteWithProviderDto } from './dto/job.dto';
 import { ErrorDto } from '../common/dto/error.dto';
 import { MetricsService } from '../metrics/metrics.service';
+import { JobsService } from './jobs.service';
 import { QuotesService } from './quotes.service';
 import { JobsRoleLimitGuard } from '../common/guards/jobs-role-limit.guard';
 import type { AuthedRequest } from '../common/types/request';
@@ -26,6 +27,7 @@ export class JobsController {
   constructor(
     private readonly prisma: PrismaService,
     private readonly metrics: MetricsService,
+    private readonly jobs: JobsService,
     private readonly quotes: QuotesService,
     private readonly assignments: AssignmentsService,
     private readonly payments: PaymentsService,
@@ -71,22 +73,13 @@ export class JobsController {
   @UseGuards(JwtAuthGuard, RolesGuard, JobsRoleLimitGuard)
   @Roles('CUSTOMER')
   @ApiBearerAuth('bearer')
-  @ApiOperation({ summary: 'Create job (customer)', description: 'Rate limited via jobs limiter; configure with JOBS_RATE_* env vars' })
+  @ApiOperation({ summary: 'Create job (customer)', description: 'Rate limited via jobs limiter; configure with JOBS_RATE_* env vars. PII in description is automatically redacted.' })
   @ApiOkResponse({ type: JobDto })
   @ApiBadRequestResponse({ type: ErrorDto })
   @ApiUnauthorizedResponse({ type: ErrorDto })
   @ApiTooManyRequestsResponse({ type: ErrorDto, headers: { 'Retry-After': { description: 'Seconds to wait before retrying', schema: { type: 'string', example: '60' } } } })
   async create(@Req() req: AuthedRequest, @Body() dto: CreateJobDto) {
-    const key = `job_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
-    const job = await this.prisma.job.create({
-      data: {
-        key,
-        title: dto.title,
-        description: dto.description,
-        customerId: req.user.sub,
-      },
-    });
-    return job;
+    return this.jobs.createJob(dto, req.user.sub);
   }
 
   @Get(':id')

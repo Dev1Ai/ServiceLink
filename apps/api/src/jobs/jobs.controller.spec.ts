@@ -11,6 +11,7 @@ import { QuotesService } from './quotes.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { AssignmentsService } from './assignments.service';
 import { PaymentsService } from '../payments/payments.service';
+import { JobsService } from './jobs.service';
 import type { AuthedRequest } from '../common/types/request';
 
 describe('JobsController - quotes', () => {
@@ -41,6 +42,7 @@ describe('JobsController - quotes', () => {
       providers: [
         { provide: PrismaService, useValue: prisma },
         { provide: MetricsService, useValue: metricsMock },
+        { provide: JobsService, useValue: { createJob: jest.fn() } },
         NotificationsService,
         { provide: AssignmentsService, useValue: { proposeScheduleAsCustomer: jest.fn() } },
         { provide: PaymentsService, useValue: paymentsMock },
