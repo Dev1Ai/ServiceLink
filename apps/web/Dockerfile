@@ -5,7 +5,7 @@ WORKDIR /app
 RUN corepack enable
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json turbo.json tsconfig.base.json ./
 COPY apps ./apps
-COPY packages ./packages 2>/dev/null || true
+COPY packages ./packages
 RUN pnpm i --frozen-lockfile
 
 FROM deps AS build

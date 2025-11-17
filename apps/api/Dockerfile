@@ -5,13 +5,15 @@ WORKDIR /app
 RUN corepack enable
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json turbo.json tsconfig.base.json ./
 COPY apps ./apps
-COPY packages ./packages 2>/dev/null || true
+COPY packages ./packages
 RUN pnpm i --frozen-lockfile
+# Generate Prisma Client
+RUN pnpm --filter api exec prisma generate
 
 FROM deps AS build
 RUN pnpm --filter api build
 
-FROM node:20-alpine AS runner
+FROM node:20 AS runner
 WORKDIR /app
 RUN corepack enable
 ENV NODE_ENV=production \
