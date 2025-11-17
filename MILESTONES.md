@@ -98,17 +98,18 @@
 - Documentation: RUNBOOK.md, ROLLBACK.md, LOAD-TESTING.md, SECURITY-AUDIT.md
 - E2E Tests: All tests stable with proper Playwright waiting patterns
 
-## 🚀 Current Work (November 2025)
-- **Active PRs:**
-  - PR #23: JobsService integration with PII redaction (ready for review)
-  - PR #24: Fixed labeler config schema (Codex automation)
+## 🚀 Recent Updates (November 2025)
+- **Merged PRs:**
+  - ✅ PR #23: JobsService integration with PII redaction (merged to main)
+  - ✅ PR #24: Closed as redundant (changes included in #23)
 - **Repository Status:**
   - All milestones M3-M8.5 complete
   - Test coverage: 96/96 unit tests, 20/21 E2E tests passing
-  - E2E infrastructure hardened (rate limiting, diagnostics)
+  - E2E infrastructure hardened (rate limits 100→1000 req/min)
+  - Labeler v5 schema + workflow improvements deployed
   - 1 flaky scheduling test documented and skipped
-- **Next Steps:**
-  - Merge pending PRs (requires manual approval)
-  - Consider M9 enhancements or prepare for production launch
+  - Repository clean: 0 open PRs, branches cleaned up
+- **Next Development:**
+  - M9 enhancements or production deployment preparation
 
-Last updated: 2025-11-16 22:15:00Z
+Last updated: 2025-11-17 02:50:00Z
