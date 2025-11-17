@@ -1,11 +1,16 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
+import { AnalyticsService } from './analytics.service';
 
 @Injectable()
 export class ProvidersService {
   private readonly logger = new Logger(ProvidersService.name);
-  constructor(private prisma: PrismaService, private config: ConfigService) {}
+  private readonly analytics: AnalyticsService;
+
+  constructor(private prisma: PrismaService, private config: ConfigService) {
+    this.analytics = new AnalyticsService(prisma);
+  }
 
   async ensureProviderProfile(userId: string) {
     let provider = await this.prisma.provider.findUnique({ where: { userId } });
@@ -79,5 +84,13 @@ export class ProvidersService {
         },
       },
     });
+  }
+
+  async getAnalytics(providerId: string) {
+    return this.analytics.getProviderAnalytics(providerId);
+  }
+
+  async getPerformanceMetrics(providerId: string, period: 'week' | 'month' | 'year' | 'all' = 'month') {
+    return this.analytics.getProviderPerformanceMetrics(providerId, period);
   }
 }

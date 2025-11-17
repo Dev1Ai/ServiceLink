@@ -404,4 +404,36 @@ export class ProvidersController {
   async completeAssignment(@Param('id') id: string, @Req() req: AuthedRequest) {
     return this.assignments.completeAssignmentAsProvider(id, req.user.sub);
   }
+
+  @Get('analytics')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('PROVIDER')
+  @ApiBearerAuth('bearer')
+  @ApiOperation({ summary: 'Get provider analytics summary' })
+  @ApiOkResponse({ description: 'Analytics summary' })
+  async getAnalytics(@Req() req: AuthedRequest) {
+    const provider = await this.prisma.provider.findUnique({
+      where: { userId: req.user.sub },
+    });
+    if (!provider) return null;
+    return this.providers.getAnalytics(provider.id);
+  }
+
+  @Get('analytics/performance')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('PROVIDER')
+  @ApiBearerAuth('bearer')
+  @ApiOperation({ summary: 'Get provider performance metrics' })
+  @ApiQuery({ name: 'period', enum: ['week', 'month', 'year', 'all'], required: false })
+  @ApiOkResponse({ description: 'Performance metrics' })
+  async getPerformanceMetrics(
+    @Req() req: AuthedRequest,
+    @Query('period') period?: 'week' | 'month' | 'year' | 'all',
+  ) {
+    const provider = await this.prisma.provider.findUnique({
+      where: { userId: req.user.sub },
+    });
+    if (!provider) return null;
+    return this.providers.getPerformanceMetrics(provider.id, period || 'month');
+  }
 }
