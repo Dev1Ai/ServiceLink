@@ -1,0 +1,28 @@
+{
+  "tiers": {
+    "BRONZE": "Bronze",
+    "SILVER": "Silver",
+    "GOLD": "Gold",
+    "PLATINUM": "Platinum"
+  },
+  "messages": {
+    "pointsEarned": "Earned {points} points from completed job ({tier} tier bonus applied)",
+    "pointsRedeemed": "Redeemed {points} points for {description}",
+    "tierUpgraded": "Congratulations! You've been upgraded to {tier} tier",
+    "rewardCreated": "Reward created successfully",
+    "rewardApplied": "Reward applied to job successfully"
+  },
+  "rewards": {
+    "discountPercent": "{value}% off next job",
+    "discountFixed": "${amount} off next job",
+    "freeService": "Free service (up to ${amount})"
+  },
+  "account": {
+    "points": "Points",
+    "tier": "Tier",
+    "lifetimePoints": "Lifetime Points",
+    "lifetimeSpent": "Lifetime Spent",
+    "pointsToNextTier": "Points to Next Tier",
+    "tierBonus": "Tier Bonus"
+  }
+}

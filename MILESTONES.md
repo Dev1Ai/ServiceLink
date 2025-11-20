@@ -100,9 +100,15 @@
     - REST API: GET /loyalty/account, GET /loyalty/rewards, POST /loyalty/redeem, POST /loyalty/apply/:code/:jobId
     - Database: LoyaltyAccount, LoyaltyTransaction, LoyaltyReward models with LoyaltyTier enum
     - 9 comprehensive unit tests (116/116 total tests passing)
+  - Multi-language Support (i18n) (PR #33 - Nov 2025)
+    - English (en) and Spanish (es) language support
+    - Automatic language resolution via query params, Accept-Language header, X-Lang header
+    - Translation files organized by domain (common, loyalty)
+    - Test endpoints: GET /i18n/test, GET /i18n/languages
+    - Comprehensive documentation and usage examples
+    - All 107 unit tests passing
 - In progress:
   - Enhanced mobile features (push notifications, offline support)
-  - Multi-language support (i18n)
 
 ## 📌 Notes
 - AI: OpenAI GPT-4o and Whisper integration with PII redaction
@@ -126,13 +132,13 @@
   - ✅ PR #27: AnalyticsService unit tests (merged to main)
   - ✅ PR #29: Docker production deployment fixes (merged to main, PR closed)
   - ✅ PR #31: Rating-based provider search filters (merged to main)
+  - ✅ PR #32: Customer loyalty program (merged to main)
 - **Open PRs:**
-  - 🔄 PR #32: Customer loyalty program (CI passing, pending approval)
-  - 🔄 PR #33: Multi-language support with i18n
+  - 🔄 PR #33: Multi-language support with i18n (pending merge)
   - 🔄 PR #34: Mobile enhancements foundation
   - 🔄 PR #35: M9 milestone completion update
 - **Repository Status:**
-  - Milestones M3-M8.5 complete, M9 in progress (3/5 features complete)
+  - Milestones M3-M8.5 complete, M9 in progress (4/5 features complete)
   - Test coverage: 116/116 unit tests, 20/21 E2E tests passing
   - E2E infrastructure hardened (rate limits 100→1000 req/min)
   - Labeler v5 schema + workflow improvements deployed
@@ -141,8 +147,8 @@
 - **M9 Progress:**
   - ✅ Provider Analytics Dashboard complete (merged)
   - ✅ Rating-based search filters complete (PR #31, merged)
-  - 🔄 Customer Loyalty Program (PR #32, pending merge)
-  - 🔄 Multi-language support (PR #33, pending merge)
+  - ✅ Customer Loyalty Program complete (PR #32, merged)
+  - 🔄 Multi-language Support (PR #33, pending merge)
   - 🔄 Mobile enhancements foundation (PR #34, pending merge)
 
-Last updated: 2025-11-20 22:00:00Z
+Last updated: 2025-11-20 22:05:00Z
