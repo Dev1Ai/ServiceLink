@@ -65,9 +65,10 @@ export class ProvidersController {
   @ApiQuery({ name: 'onlineOnly', required: false, description: 'Filter to online providers', schema: { type: 'boolean' } })
   @ApiQuery({ name: 'minPrice', required: false, description: 'Minimum service price', schema: { type: 'number' } })
   @ApiQuery({ name: 'maxPrice', required: false, description: 'Maximum service price', schema: { type: 'number' } })
+  @ApiQuery({ name: 'minRating', required: false, description: 'Minimum average rating (0-5)', schema: { type: 'number' } })
   @ApiQuery({ name: 'page', required: false, description: 'Page number (1+)', schema: { type: 'integer', default: 1 } })
   @ApiQuery({ name: 'take', required: false, description: 'Page size (1-100)', schema: { type: 'integer', default: 50 } })
-  @ApiQuery({ name: 'sort', required: false, description: 'Sort by price | online', schema: { type: 'string', default: 'price' } })
+  @ApiQuery({ name: 'sort', required: false, description: 'Sort by price | online | rating', schema: { type: 'string', default: 'price' } })
   @ApiQuery({ name: 'order', required: false, description: 'asc | desc', schema: { type: 'string', default: 'asc' } })
   @ApiQuery({ name: 'lat', required: false, description: 'Latitude for optional radius filter', schema: { type: 'number' } })
   @ApiQuery({ name: 'lng', required: false, description: 'Longitude for optional radius filter', schema: { type: 'number' } })
@@ -81,6 +82,7 @@ export class ProvidersController {
     const onlineOnly = !!dto.onlineOnly;
     const minPrice = dto.minPrice ?? NaN;
     const maxPrice = dto.maxPrice ?? NaN;
+    const minRating = dto.minRating ?? NaN;
     const page = dto.page ?? 1;
     const take = dto.take ?? 50;
     // const skip = (page - 1) * take; // not used; results are post-filtered client-side
@@ -89,6 +91,7 @@ export class ProvidersController {
     if (onlineOnly) filters.push({ online: true });
     if (isFinite(minPrice)) filters.push({ services: { some: { price: { gte: Number(minPrice) } } } });
     if (isFinite(maxPrice)) filters.push({ services: { some: { price: { lte: Number(maxPrice) } } } });
+    if (isFinite(minRating)) filters.push({ averageRating: { gte: Number(minRating) } });
     if (serviceName) filters.push({ services: { some: { name: { equals: serviceName, mode: 'insensitive' } } } });
     if (categorySlug) filters.push({ services: { some: { category: { slug: { equals: categorySlug, mode: 'insensitive' } } } } });
     const where: Prisma.ProviderWhereInput = filters.length ? { AND: filters } : {};
@@ -108,6 +111,8 @@ export class ProvidersController {
       online: true,
       lat: true,
       lng: true,
+      averageRating: true,
+      reviewCount: true,
       services: { select: { id: true, name: true, price: true, description: true } },
       user: { select: { email: true, name: true } },
     } satisfies Prisma.ProviderSelect;
@@ -134,11 +139,16 @@ export class ProvidersController {
           return { ...p, distanceKm: dist, minServicePrice: isFinite(minServicePrice) ? minServicePrice : null };
         })
         .filter((p) => p.distanceKm <= (radiusKm || 25) && (!p.serviceRadiusKm || p.distanceKm <= p.serviceRadiusKm));
-      // Note: sorting by sort param (price|online)
+      // Note: sorting by sort param (price|online|rating)
       withDist.sort((a, b) => {
         if (sort === 'online') {
           const av = a.online ? 1 : 0;
           const bv = b.online ? 1 : 0;
+          return (order === 'asc' ? av - bv : bv - av) || a.distanceKm - b.distanceKm;
+        }
+        if (sort === 'rating') {
+          const av = a.averageRating ?? 0;
+          const bv = b.averageRating ?? 0;
           return (order === 'asc' ? av - bv : bv - av) || a.distanceKm - b.distanceKm;
         }
         const av = a.minServicePrice ?? Infinity;
@@ -158,6 +168,8 @@ export class ProvidersController {
         online: true,
         lat: true,
         lng: true,
+        averageRating: true,
+        reviewCount: true,
         services: {
           select: {
             id: true,
@@ -182,6 +194,11 @@ export class ProvidersController {
         if (sort === 'online') {
           const av = a.online ? 1 : 0;
           const bv = b.online ? 1 : 0;
+          return (order === 'asc' ? av - bv : bv - av);
+        }
+        if (sort === 'rating') {
+          const av = a.averageRating ?? 0;
+          const bv = b.averageRating ?? 0;
           return (order === 'asc' ? av - bv : bv - av);
         }
         const av = a.minServicePrice ?? Infinity;
@@ -223,7 +240,8 @@ export class ProvidersController {
   @ApiQuery({ name: 'category', required: false, description: 'Category slug filter (case-insensitive)' })
   @ApiQuery({ name: 'minPrice', required: false, description: 'Minimum service price', schema: { type: 'number' } })
   @ApiQuery({ name: 'maxPrice', required: false, description: 'Maximum service price', schema: { type: 'number' } })
-  @ApiQuery({ name: 'sort', required: false, description: 'Sort by distance | price | online', schema: { type: 'string', default: 'distance' } })
+  @ApiQuery({ name: 'minRating', required: false, description: 'Minimum average rating (0-5)', schema: { type: 'number' } })
+  @ApiQuery({ name: 'sort', required: false, description: 'Sort by distance | price | online | rank | rating', schema: { type: 'string', default: 'distance' } })
   @ApiQuery({ name: 'order', required: false, description: 'asc | desc', schema: { type: 'string', default: 'asc' } })
   @ApiQuery({ name: 'page', required: false, description: 'Page number (1+)', schema: { type: 'integer', default: 1 } })
   @ApiQuery({ name: 'take', required: false, description: 'Page size (1-100)', schema: { type: 'integer', default: 50 } })
@@ -239,6 +257,7 @@ export class ProvidersController {
     const onlineOnly = !!req.onlineOnly;
     const minPrice = req.minPrice ?? NaN;
     const maxPrice = req.maxPrice ?? NaN;
+    const minRating = req.minRating ?? NaN;
     const sort = req.sort ?? 'distance';
     const rank = req.rank ?? 'balanced';
     const order = req.order ?? 'asc';
@@ -255,6 +274,7 @@ export class ProvidersController {
     if (onlineOnly) nearFilters.push({ online: true });
     if (isFinite(minPrice)) nearFilters.push({ services: { some: { price: { gte: Number(minPrice) } } } });
     if (isFinite(maxPrice)) nearFilters.push({ services: { some: { price: { lte: Number(maxPrice) } } } });
+    if (isFinite(minRating)) nearFilters.push({ averageRating: { gte: Number(minRating) } });
     const nearWhere: Prisma.ProviderWhereInput = { AND: nearFilters };
     const nearSelect = {
       id: true,
@@ -263,6 +283,8 @@ export class ProvidersController {
       lng: true,
       serviceRadiusKm: true,
       online: true,
+      averageRating: true,
+      reviewCount: true,
       services: { select: { id: true, name: true, price: true, category: { select: { name: true, slug: true } } } },
       user: { select: { name: true, email: true } },
     } satisfies Prisma.ProviderSelect;
@@ -314,6 +336,11 @@ export class ProvidersController {
         if (sort === 'online') {
           const av = a.online ? 1 : 0;
           const bv = b.online ? 1 : 0;
+          return (order === 'asc' ? av - bv : bv - av) || a.distanceKm - b.distanceKm;
+        }
+        if (sort === 'rating') {
+          const av = a.averageRating ?? 0;
+          const bv = b.averageRating ?? 0;
           return (order === 'asc' ? av - bv : bv - av) || a.distanceKm - b.distanceKm;
         }
         return order === 'asc' ? a.distanceKm - b.distanceKm : b.distanceKm - a.distanceKm;

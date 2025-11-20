@@ -15,6 +15,10 @@ describe('ReviewsService', () => {
     job: {
       findUnique: jest.fn(),
     },
+    provider: {
+      findUnique: jest.fn(),
+      update: jest.fn(),
+    },
   };
 
   beforeEach(async () => {
@@ -56,15 +60,23 @@ describe('ReviewsService', () => {
       };
 
       const mockReview = { id: 'review1', ...reviewData };
+      const mockProvider = { id: 'provider1', userId: 'provider1' };
 
       mockPrismaService.job.findUnique.mockResolvedValue(mockJob);
       mockPrismaService.review.create.mockResolvedValue(mockReview);
+      mockPrismaService.provider.findUnique.mockResolvedValue(mockProvider);
+      mockPrismaService.review.findMany.mockResolvedValue([{ stars: 5 }]);
+      mockPrismaService.provider.update.mockResolvedValue({ ...mockProvider, averageRating: 5, reviewCount: 1 });
 
       const result = await service.createReview(reviewData);
 
       expect(result).toEqual(mockReview);
       expect(mockPrismaService.review.create).toHaveBeenCalledWith({
         data: reviewData,
+      });
+      expect(mockPrismaService.provider.update).toHaveBeenCalledWith({
+        where: { id: 'provider1' },
+        data: { averageRating: 5, reviewCount: 1 },
       });
     });
 

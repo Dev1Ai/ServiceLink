@@ -83,9 +83,15 @@
     - 11 comprehensive unit tests (107/107 total tests passing)
     - Metrics: jobs count, revenue, ratings, acceptance/completion rates
     - Performance data: jobs by status, revenue trends, top services, satisfaction
+  - Rating-Based Search Filters (PR #30 - Nov 2025)
+    - Filter providers by minimum average rating (minRating query param)
+    - Sort providers by rating (ascending/descending)
+    - Automatic rating cache updates on review creation
+    - Added averageRating and reviewCount fields to Provider model
+    - Database index on averageRating for optimized queries
+    - All 107 unit tests passing
 - In progress:
   - Enhanced mobile features (push notifications, offline support)
-  - Advanced search filters (price range, availability, ratings)
   - Customer loyalty program
   - Multi-language support (i18n)
 
@@ -109,15 +115,19 @@
   - ✅ PR #24: Closed as redundant (changes included in #23)
   - ✅ PR #26: Provider Analytics Dashboard API (merged to main)
   - ✅ PR #27: AnalyticsService unit tests (merged to main)
+- **Open PRs:**
+  - 🔄 PR #29: Docker production deployment fixes (pending approval)
+  - 🔄 PR #30: Rating-based provider search filters (CI running)
 - **Repository Status:**
   - Milestones M3-M8.5 complete, M9 in progress
   - Test coverage: 107/107 unit tests, 20/21 E2E tests passing
   - E2E infrastructure hardened (rate limits 100→1000 req/min)
   - Labeler v5 schema + workflow improvements deployed
   - 1 flaky scheduling test documented and skipped
-  - Repository clean: 0 open PRs, branches cleaned up
+  - Stale branches cleaned up (6 branches removed)
 - **M9 Progress:**
-  - Provider Analytics Dashboard complete (API + tests)
-  - Next: Advanced search filters or mobile enhancements
+  - ✅ Provider Analytics Dashboard complete (API + tests)
+  - ✅ Rating-based search filters complete (PR #30)
+  - 🔄 Next: Enhanced mobile features or customer loyalty program
 
-Last updated: 2025-11-17 08:02:00Z
+Last updated: 2025-11-20 15:35:00Z
