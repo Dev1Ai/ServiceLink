@@ -83,11 +83,32 @@
     - 11 comprehensive unit tests (107/107 total tests passing)
     - Metrics: jobs count, revenue, ratings, acceptance/completion rates
     - Performance data: jobs by status, revenue trends, top services, satisfaction
+  - Rating-Based Search Filters (PR #30, #31 - Nov 2025)
+    - Filter providers by minimum average rating (minRating query param)
+    - Sort providers by rating (ascending/descending)
+    - Automatic rating cache updates on review creation
+    - Added averageRating and reviewCount fields to Provider model
+    - Database index on averageRating for optimized queries
+    - All 107 unit tests passing
+  - Customer Loyalty Program (PR #32 - Nov 2025)
+    - 4-tier system: Bronze (0-999), Silver (1000-4999), Gold (5000-9999), Platinum (10000+)
+    - Point earning: 1 point per $1 with tier bonuses (Bronze +0%, Silver +10%, Gold +20%, Platinum +30%)
+    - Tier-specific reward catalog (discounts, free services)
+    - Automatic tier upgrades based on lifetime points
+    - Reward redemption with unique 8-character codes (90-day expiration)
+    - Full transaction audit trail with LoyaltyTransaction model
+    - REST API: GET /loyalty/account, GET /loyalty/rewards, POST /loyalty/redeem, POST /loyalty/apply/:code/:jobId
+    - Database: LoyaltyAccount, LoyaltyTransaction, LoyaltyReward models with LoyaltyTier enum
+    - 9 comprehensive unit tests (116/116 total tests passing)
+  - Multi-language Support (i18n) (PR #33 - Nov 2025)
+    - English (en) and Spanish (es) language support
+    - Automatic language resolution via query params, Accept-Language header, X-Lang header
+    - Translation files organized by domain (common, loyalty)
+    - Test endpoints: GET /i18n/test, GET /i18n/languages
+    - Comprehensive documentation and usage examples
+    - All 107 unit tests passing
 - In progress:
   - Enhanced mobile features (push notifications, offline support)
-  - Advanced search filters (price range, availability, ratings)
-  - Customer loyalty program
-  - Multi-language support (i18n)
 
 ## 📌 Notes
 - AI: OpenAI GPT-4o and Whisper integration with PII redaction
@@ -109,15 +130,23 @@
   - ✅ PR #24: Closed as redundant (changes included in #23)
   - ✅ PR #26: Provider Analytics Dashboard API (merged to main)
   - ✅ PR #27: AnalyticsService unit tests (merged to main)
+  - ✅ PR #29: Docker production deployment fixes (merged to main, PR closed)
+- **Open PRs:**
+  - 🔄 PR #31: Rating-based provider search filters (CI passing, pending approval)
+  - 🔄 PR #32: Customer loyalty program (CI passing, pending approval)
+  - 🔄 PR #33: Multi-language support with i18n (CI running)
 - **Repository Status:**
-  - Milestones M3-M8.5 complete, M9 in progress
+  - Milestones M3-M8.5 complete, M9 in progress (4/5 features complete)
   - Test coverage: 107/107 unit tests, 20/21 E2E tests passing
   - E2E infrastructure hardened (rate limits 100→1000 req/min)
   - Labeler v5 schema + workflow improvements deployed
   - 1 flaky scheduling test documented and skipped
-  - Repository clean: 0 open PRs, branches cleaned up
+  - Stale branches cleaned up (7 branches removed)
 - **M9 Progress:**
-  - Provider Analytics Dashboard complete (API + tests)
-  - Next: Advanced search filters or mobile enhancements
+  - ✅ Provider Analytics Dashboard complete (API + tests)
+  - ✅ Rating-based search filters complete (PR #31, all CI passing)
+  - ✅ Customer Loyalty Program complete (PR #32, all CI passing)
+  - ✅ Multi-language Support complete (PR #33, CI running)
+  - 🔄 Next: Enhanced mobile features (push notifications, offline support)
 
-Last updated: 2025-11-17 08:02:00Z
+Last updated: 2025-11-20 21:20:00Z
