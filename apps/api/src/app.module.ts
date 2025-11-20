@@ -14,6 +14,7 @@ import { JobsModule } from './jobs/jobs.module';
 import { RemindersModule } from './reminders/reminders.module';
 import { ReviewsModule } from './reviews/reviews.module';
 import { LlmModule } from './llm/llm.module';
+import { LoyaltyModule } from './loyalty/loyalty.module';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { RoleAwareThrottlerGuard } from './common/guards/role-throttler.guard';
 import { ConfigService } from '@nestjs/config';
@@ -67,6 +68,7 @@ import { ConfigService } from '@nestjs/config';
     RemindersModule,
     ReviewsModule,
     LlmModule,
+    LoyaltyModule,
   ],
   providers: [
     {
