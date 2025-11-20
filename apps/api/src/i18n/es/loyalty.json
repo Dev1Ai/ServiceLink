@@ -1,0 +1,28 @@
+{
+  "tiers": {
+    "BRONZE": "Bronce",
+    "SILVER": "Plata",
+    "GOLD": "Oro",
+    "PLATINUM": "Platino"
+  },
+  "messages": {
+    "pointsEarned": "Ganaste {points} puntos del trabajo completado (bono de nivel {tier} aplicado)",
+    "pointsRedeemed": "Canjeaste {points} puntos por {description}",
+    "tierUpgraded": "¡Felicitaciones! Has sido ascendido al nivel {tier}",
+    "rewardCreated": "Recompensa creada exitosamente",
+    "rewardApplied": "Recompensa aplicada al trabajo exitosamente"
+  },
+  "rewards": {
+    "discountPercent": "{value}% de descuento en el próximo trabajo",
+    "discountFixed": "${amount} de descuento en el próximo trabajo",
+    "freeService": "Servicio gratis (hasta ${amount})"
+  },
+  "account": {
+    "points": "Puntos",
+    "tier": "Nivel",
+    "lifetimePoints": "Puntos Totales",
+    "lifetimeSpent": "Gasto Total",
+    "pointsToNextTier": "Puntos para el Siguiente Nivel",
+    "tierBonus": "Bono de Nivel"
+  }
+}

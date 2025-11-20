@@ -38,10 +38,18 @@ export class SearchProvidersQueryDto {
   @Min(1)
   maxPrice?: number;
 
-  @ApiPropertyOptional({ enum: ['price', 'online'], default: 'price' })
+  @ApiPropertyOptional({ type: Number, description: 'Minimum average rating (0-5)' })
   @IsOptional()
-  @IsIn(['price', 'online'])
-  sort?: 'price' | 'online' = 'price';
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  @Max(5)
+  minRating?: number;
+
+  @ApiPropertyOptional({ enum: ['price', 'online', 'rating'], default: 'price' })
+  @IsOptional()
+  @IsIn(['price', 'online', 'rating'])
+  sort?: 'price' | 'online' | 'rating' = 'price';
 
   @ApiPropertyOptional({ enum: ['asc', 'desc'], default: 'asc' })
   @IsOptional()
@@ -137,10 +145,18 @@ export class NearProvidersQueryDto {
   @Min(1)
   maxPrice?: number;
 
-  @ApiPropertyOptional({ enum: ['distance', 'price', 'online', 'rank'], default: 'distance' })
+  @ApiPropertyOptional({ type: Number, description: 'Minimum average rating (0-5)' })
   @IsOptional()
-  @IsIn(['distance', 'price', 'online', 'rank'])
-  sort?: 'distance' | 'price' | 'online' | 'rank' = 'distance';
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  @Max(5)
+  minRating?: number;
+
+  @ApiPropertyOptional({ enum: ['distance', 'price', 'online', 'rank', 'rating'], default: 'distance' })
+  @IsOptional()
+  @IsIn(['distance', 'price', 'online', 'rank', 'rating'])
+  sort?: 'distance' | 'price' | 'online' | 'rank' | 'rating' = 'distance';
 
   @ApiPropertyOptional({ enum: ['balanced', 'cheap', 'near', 'online'], default: 'balanced' })
   @IsOptional()
