@@ -42,13 +42,47 @@ export class ReviewsService {
     }
 
     // Create review
-    return this.prisma.review.create({
+    const review = await this.prisma.review.create({
       data: {
         jobId: data.jobId,
         raterUserId: data.raterUserId,
         rateeUserId: data.rateeUserId,
         stars: data.stars,
         comment: data.comment,
+      },
+    });
+
+    // Update provider rating cache if the ratee is a provider
+    await this.updateProviderRatingCache(data.rateeUserId);
+
+    return review;
+  }
+
+  /**
+   * Update the cached average rating and review count for a provider
+   */
+  private async updateProviderRatingCache(userId: string): Promise<void> {
+    const provider = await this.prisma.provider.findUnique({
+      where: { userId },
+    });
+
+    if (!provider) return;
+
+    const reviews = await this.prisma.review.findMany({
+      where: { rateeUserId: userId },
+      select: { stars: true },
+    });
+
+    const reviewCount = reviews.length;
+    const averageRating = reviewCount > 0
+      ? reviews.reduce((acc, r) => acc + r.stars, 0) / reviewCount
+      : 0;
+
+    await this.prisma.provider.update({
+      where: { id: provider.id },
+      data: {
+        averageRating,
+        reviewCount,
       },
     });
   }
