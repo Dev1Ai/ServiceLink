@@ -16,6 +16,7 @@ import { ReviewsModule } from './reviews/reviews.module';
 import { LlmModule } from './llm/llm.module';
 import { I18nConfigModule } from './i18n/i18n.module';
 import { LoyaltyModule } from './loyalty/loyalty.module';
+import { NotificationsModule } from './notifications/notifications.module';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { RoleAwareThrottlerGuard } from './common/guards/role-throttler.guard';
 import { ConfigService } from '@nestjs/config';
@@ -71,6 +72,7 @@ import { ConfigService } from '@nestjs/config';
     LlmModule,
     I18nConfigModule,
     LoyaltyModule,
+    NotificationsModule,
   ],
   providers: [
     {

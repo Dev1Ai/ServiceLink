@@ -24,11 +24,12 @@ model User {
   status    String   @default("active")
   createdAt DateTime @default(now())
 
-  profile   Profile?
-  provider  Provider?
-  jobs      Job[]         @relation("UserJobs")
-  messages  ChatMessage[]
-  payments  Payment[]
+  profile      Profile?
+  provider     Provider?
+  jobs         Job[]           @relation("UserJobs")
+  messages     ChatMessage[]
+  payments     Payment[]
+  deviceTokens DeviceToken[]
 }
 
 model Profile {
@@ -298,4 +299,19 @@ model LoyaltyReward {
   @@index([accountId])
   @@index([code])
   @@index([redeemedAt])
+}
+
+model DeviceToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  platform  String   // ios, android, web
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([active])
+  @@index([platform])
 }
