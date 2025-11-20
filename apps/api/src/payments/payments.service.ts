@@ -10,7 +10,10 @@ export class PaymentsService {
   private readonly logger = new Logger(PaymentsService.name);
   private stripe: any;
 
-  constructor(private readonly prisma: PrismaService, private readonly config: ConfigService) {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly config: ConfigService,
+  ) {
     if (this.hasRealStripeKeys()) {
       // eslint-disable-next-line @typescript-eslint/no-var-requires
       const Stripe = require('stripe');
@@ -173,13 +176,21 @@ export class PaymentsService {
 
     const paymentIntent = await this.stripe.paymentIntents.capture(paymentIntentId);
 
-    await this.prisma.payment.update({
+    const payment = await this.prisma.payment.update({
       where: { stripePaymentIntentId: paymentIntentId },
       data: {
         status: paymentIntent.status,
         capturedAt: new Date(),
       },
+      include: {
+        job: true,
+      },
     });
+
+    // Award loyalty points for completed payment
+    // Note: This will be triggered via event/webhook in production
+    // For now, marking as a placeholder for integration
+    this.logger.log(`Payment captured for job ${payment.jobId}, customer ${payment.customerId}. Loyalty points can be awarded here.`);
 
     return paymentIntent;
   }

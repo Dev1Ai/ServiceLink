@@ -53,6 +53,10 @@ model Provider {
   assignments     Assignment[]
   lat             Float?
   lng             Float?
+  averageRating   Float?       @default(0)
+  reviewCount     Int          @default(0)
+
+  @@index([averageRating])
 }
 
 model Service {
@@ -238,4 +242,60 @@ model KnowledgeBase {
   updatedAt   DateTime               @updatedAt
 
   @@index([category])
+}
+
+enum LoyaltyTier {
+  BRONZE
+  SILVER
+  GOLD
+  PLATINUM
+}
+
+model LoyaltyAccount {
+  id               String              @id @default(cuid())
+  userId           String              @unique
+  points           Int                 @default(0)
+  tier             LoyaltyTier         @default(BRONZE)
+  lifetimePoints   Int                 @default(0)
+  lifetimeSpent    Int                 @default(0)
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  transactions     LoyaltyTransaction[]
+  rewards          LoyaltyReward[]
+
+  @@index([tier])
+  @@index([points])
+}
+
+model LoyaltyTransaction {
+  id          String         @id @default(cuid())
+  accountId   String
+  account     LoyaltyAccount @relation(fields: [accountId], references: [id])
+  points      Int
+  type        String         // EARN, REDEEM, EXPIRE, ADJUSTMENT
+  description String
+  jobId       String?
+  createdAt   DateTime       @default(now())
+
+  @@index([accountId])
+  @@index([jobId])
+  @@index([type])
+}
+
+model LoyaltyReward {
+  id          String         @id @default(cuid())
+  accountId   String
+  account     LoyaltyAccount @relation(fields: [accountId], references: [id])
+  type        String         // DISCOUNT_PERCENT, DISCOUNT_FIXED, FREE_SERVICE
+  value       Int            // percentage (e.g., 10 for 10%) or fixed amount in cents
+  description String
+  code        String?        @unique
+  expiresAt   DateTime?
+  redeemedAt  DateTime?
+  jobId       String?        // Job where reward was redeemed
+  createdAt   DateTime       @default(now())
+
+  @@index([accountId])
+  @@index([code])
+  @@index([redeemedAt])
 }
