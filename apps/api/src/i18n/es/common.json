@@ -1,0 +1,28 @@
+{
+  "errors": {
+    "unauthorized": "No autorizado",
+    "forbidden": "Prohibido",
+    "notFound": "Recurso no encontrado",
+    "badRequest": "Solicitud incorrecta",
+    "internalError": "Error interno del servidor",
+    "validationFailed": "Validación fallida",
+    "insufficientPoints": "Puntos insuficientes. Requerido: {required}, Disponible: {available}",
+    "rewardNotFound": "Recompensa no encontrada o ya canjeada",
+    "jobNotFound": "Trabajo no encontrado",
+    "userNotAuthorized": "El usuario no está autorizado para realizar esta acción"
+  },
+  "success": {
+    "created": "Recurso creado exitosamente",
+    "updated": "Recurso actualizado exitosamente",
+    "deleted": "Recurso eliminado exitosamente"
+  },
+  "validation": {
+    "required": "{field} es requerido",
+    "email": "Dirección de correo electrónico no válida",
+    "minLength": "{field} debe tener al menos {min} caracteres",
+    "maxLength": "{field} debe tener como máximo {max} caracteres",
+    "min": "{field} debe ser al menos {min}",
+    "max": "{field} debe ser como máximo {max}",
+    "invalidStars": "Las estrellas deben estar entre 1 y 5"
+  }
+}

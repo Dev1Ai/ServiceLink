@@ -1,0 +1,28 @@
+{
+  "errors": {
+    "unauthorized": "Unauthorized",
+    "forbidden": "Forbidden",
+    "notFound": "Resource not found",
+    "badRequest": "Bad request",
+    "internalError": "Internal server error",
+    "validationFailed": "Validation failed",
+    "insufficientPoints": "Insufficient points. Required: {required}, Available: {available}",
+    "rewardNotFound": "Reward not found or already redeemed",
+    "jobNotFound": "Job not found",
+    "userNotAuthorized": "User is not authorized to perform this action"
+  },
+  "success": {
+    "created": "Resource created successfully",
+    "updated": "Resource updated successfully",
+    "deleted": "Resource deleted successfully"
+  },
+  "validation": {
+    "required": "{field} is required",
+    "email": "Invalid email address",
+    "minLength": "{field} must be at least {min} characters",
+    "maxLength": "{field} must be at most {max} characters",
+    "min": "{field} must be at least {min}",
+    "max": "{field} must be at most {max}",
+    "invalidStars": "Stars must be between 1 and 5"
+  }
+}
