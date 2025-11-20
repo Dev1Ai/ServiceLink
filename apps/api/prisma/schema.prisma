@@ -54,6 +54,10 @@ model Provider {
   assignments     Assignment[]
   lat             Float?
   lng             Float?
+  averageRating   Float?       @default(0)
+  reviewCount     Int          @default(0)
+
+  @@index([averageRating])
 }
 
 model Service {
