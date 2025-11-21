@@ -112,7 +112,9 @@ export async function seed() {
             description: 'Test job for realtime chat E2E tests',
             assignment: {
               create: {
-                providerId: provider.id,
+                provider: {
+                  connect: { id: provider.id },
+                },
                 status: 'scheduled',
               },
             },
