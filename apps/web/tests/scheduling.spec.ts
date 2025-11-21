@@ -86,14 +86,28 @@ test.describe('Scheduling workflow', () => {
     await expect(page.locator('text=Status: scheduled')).toBeVisible({ timeout: 15000 });
     await expect(page.locator('text=Version: 2')).toBeVisible({ timeout: 15000 });
 
+    // Wait for the status to update to 'scheduled' before proceeding
+    // This ensures the backend has processed the confirmation
+    await expect(page.locator('text=Status: scheduled')).toBeVisible({ timeout: 15000 });
+
+    // Explicitly wait for network to be idle to ensure all state updates complete
+    await page.waitForLoadState('networkidle', { timeout: 10000 });
+
     // Click the Refresh button to ensure the component reloads with updated state
-    // This guarantees that the "Reject assignment" section will render properly
     await page.getByRole('button', { name: 'Refresh' }).click();
 
-    // Wait for the refresh to complete by checking that Version: 2 is still visible
+    // Wait for refresh to complete - check both status and version are visible
+    await expect(page.locator('text=Status: scheduled')).toBeVisible({ timeout: 10000 });
     await expect(page.locator('text=Version: 2')).toBeVisible({ timeout: 10000 });
 
-    // Now the reject assignment button should be visible (provider role required)
+    // Wait for page to be fully loaded after refresh
+    await page.waitForLoadState('networkidle', { timeout: 10000 });
+
+    // Now the reject assignment section should be visible
+    // First check for the section heading
+    await expect(page.locator('h4', { hasText: 'Reject assignment' })).toBeVisible({ timeout: 15000 });
+
+    // Then locate the reject button
     const rejectBtn = page.getByRole('button', { name: 'Reject assignment and reopen job' });
     await expect(rejectBtn).toBeVisible({ timeout: 10000 });
 
