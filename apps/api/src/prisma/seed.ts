@@ -55,6 +55,7 @@ export async function seed() {
     const plumbing = await upsertCategory('Plumbing', 'plumbing', home.id);
 
     const providerUser = await prisma.user.findUnique({ where: { email: 'provider@example.com' }, select: { id: true } });
+    const customerUser = await prisma.user.findUnique({ where: { email: 'customer@example.com' }, select: { id: true } });
     if (providerUser) {
       const provider = await prisma.provider.upsert({
         where: { userId: providerUser.id },
@@ -95,6 +96,26 @@ export async function seed() {
             description: 'Fix minor leaks (parts not included)',
             price: 8000,
             categoryId: plumbing.id,
+          },
+        });
+      }
+
+      // Create demo job for E2E testing
+      if (customerUser) {
+        await prisma.job.upsert({
+          where: { key: 'demo' },
+          update: {},
+          create: {
+            key: 'demo',
+            customerId: customerUser.id,
+            title: 'Demo Job for E2E Testing',
+            description: 'Test job for realtime chat E2E tests',
+            assignment: {
+              create: {
+                providerId: provider.id,
+                status: 'scheduled',
+              },
+            },
           },
         });
       }
