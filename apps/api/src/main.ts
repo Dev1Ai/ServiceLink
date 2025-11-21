@@ -82,7 +82,7 @@ async function bootstrap() {
   await prismaService.enableShutdownHooks(app);
 
   // Use raw body for Stripe webhook verification
-  app.use('/stripe/webhook', raw({ type: 'application/json' }));
+  app.use('/webhooks/stripe', raw({ type: 'application/json' }));
 
   await app.listen(port);
   console.log(`API listening on http://localhost:${port}`);

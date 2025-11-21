@@ -86,7 +86,12 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection, OnGa
       if (auth?.startsWith('Bearer ')) token = auth.slice('Bearer '.length);
       if (!token) token = (client.handshake.auth?.token as string | undefined) || (client.handshake.query?.token as string | undefined);
       if (!token) return null;
-      const payload = (await this.jwt.verifyAsync(token, { secret: this.config.get<string>('JWT_SECRET', 'changeme') })) as JwtPayload;
+      const secret = this.config.get<string>('JWT_SECRET');
+      if (!secret) {
+        this.logger.error('JWT_SECRET environment variable is not configured');
+        return null;
+      }
+      const payload = (await this.jwt.verifyAsync(token, { secret })) as JwtPayload;
       return payload;
     } catch {
       return null;
@@ -114,9 +119,44 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection, OnGa
     if (this.posthog) this.posthog.capture({ distinctId: payload.sub, event: 'ws_connect', properties: { role: payload.role, redis: this.redisAdapterReady } });
     this.metrics.incWsConnect(payload.role, this.redisAdapterReady);
 
-    // Basic rooms: clients can join job rooms
-    client.on('room:join', (room: string) => {
-      if (typeof room === 'string' && room) client.join(room);
+    // Basic rooms: clients can join job rooms with authorization
+    client.on('room:join', async (room: string) => {
+      if (typeof room !== 'string' || !room) return;
+
+      // Check if room is job-specific
+      const jobMatch = /^job:(.+)$/.exec(room);
+      if (jobMatch) {
+        const jobKey = jobMatch[1];
+        const userId = (client.data as { userId?: string }).userId as string;
+
+        // Verify user has access to this job
+        const job = await this.prisma.job.findUnique({
+          where: { key: jobKey },
+          include: {
+            assignments: {
+              where: { providerId: userId },
+              select: { id: true },
+            },
+          },
+        });
+
+        if (!job) {
+          client.emit('error', { message: 'Job not found' });
+          return;
+        }
+
+        // Only allow customer, assigned provider, or admin
+        const isCustomer = job.customerId === userId;
+        const isAssignedProvider = job.assignments.length > 0;
+        const isAdmin = (client.data as { role?: string }).role === 'ADMIN';
+
+        if (!isCustomer && !isAssignedProvider && !isAdmin) {
+          client.emit('error', { message: 'Unauthorized to join this job room' });
+          return;
+        }
+      }
+
+      client.join(room);
     });
     client.on('room:leave', (room: string) => {
       if (typeof room === 'string' && room) client.leave(room);
@@ -148,6 +188,14 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection, OnGa
         return;
       }
       if (!data?.room || typeof data.content !== 'string' || data.content.trim() === '') return;
+
+      // Verify the client has joined this room (authorization check)
+      const rooms = Array.from(client.rooms);
+      if (!rooms.includes(data.room)) {
+        client.emit('error', { message: 'Must join room before sending messages' });
+        return;
+      }
+
       // Persist if room looks like a job room: job:<key>
       const match = /^job:(.+)$/.exec(data.room);
       let ts = new Date().toISOString();
@@ -155,16 +203,32 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection, OnGa
       const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { id: true, email: true, name: true } });
       if (match) {
         const key = match[1];
-        const job = await this.prisma.job.upsert({
+        // Find existing job - do NOT auto-create
+        const job = await this.prisma.job.findUnique({
           where: { key },
-          update: {},
-          create: {
-            key,
-            title: `Chat for ${key}`,
-            description: 'Auto-created from chat message',
-            customerId: userId,
+          include: {
+            assignments: {
+              where: { providerId: userId },
+              select: { id: true },
+            },
           },
         });
+
+        if (!job) {
+          client.emit('error', { message: 'Job not found' });
+          return;
+        }
+
+        // Verify authorization again (defensive check)
+        const isCustomer = job.customerId === userId;
+        const isAssignedProvider = job.assignments.length > 0;
+        const isAdmin = role === 'ADMIN';
+
+        if (!isCustomer && !isAssignedProvider && !isAdmin) {
+          client.emit('error', { message: 'Unauthorized to send messages in this job room' });
+          return;
+        }
+
         const saved = await this.prisma.chatMessage.create({ data: { jobId: job.id, userId, content: data.content } });
         id = saved.id;
         ts = saved.createdAt.toISOString();

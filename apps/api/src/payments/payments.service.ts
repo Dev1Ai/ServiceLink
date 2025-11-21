@@ -169,9 +169,41 @@ export class PaymentsService {
     return { clientSecret: paymentIntent.client_secret, paymentIntentId: paymentIntent.id };
   }
 
-  async capturePayment(paymentIntentId: string) {
+  async capturePayment(paymentIntentId: string, customerId: string) {
     if (!this.stripe) {
       throw new BadRequestException('Stripe is not configured');
+    }
+
+    // First verify the payment belongs to the requesting customer
+    const existingPayment = await this.prisma.payment.findUnique({
+      where: { stripePaymentIntentId: paymentIntentId },
+      include: {
+        job: {
+          select: {
+            id: true,
+            customerId: true,
+            assignment: {
+              select: {
+                status: true,
+                completedAt: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!existingPayment) {
+      throw new BadRequestException('Payment not found');
+    }
+
+    if (existingPayment.customerId !== customerId) {
+      throw new BadRequestException('Unauthorized: Payment does not belong to this customer');
+    }
+
+    // Verify the job assignment is completed before capturing payment
+    if (!existingPayment.job.assignment?.completedAt) {
+      throw new BadRequestException('Payment can only be captured for completed assignments');
     }
 
     const paymentIntent = await this.stripe.paymentIntents.capture(paymentIntentId);
