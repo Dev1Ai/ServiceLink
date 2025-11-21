@@ -2,7 +2,7 @@ version: '3.9'
 
 services:
   postgres:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     container_name: servicelink-postgres-staging
     environment:
       POSTGRES_USER: postgres
@@ -29,9 +29,12 @@ services:
       NODE_ENV: production
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/servicelink
       REDIS_URL: redis://redis:6379
-      JWT_SECRET: change-me
-      STRIPE_RETURN_URL: http://localhost:3000/provider/onboarding/completed
-      STRIPE_REFRESH_URL: http://localhost:3000/provider/onboarding/refresh
+      # REQUIRED: Must be set via environment variable for staging
+      # Generate with: openssl rand -base64 32
+      JWT_SECRET: ${JWT_SECRET:?Error: JWT_SECRET must be set for staging}
+      # REQUIRED: Must be staging HTTPS URLs
+      STRIPE_RETURN_URL: ${STRIPE_RETURN_URL:?Error: STRIPE_RETURN_URL must be set (e.g., https://staging.servicelink.com/provider/onboarding/completed)}
+      STRIPE_REFRESH_URL: ${STRIPE_REFRESH_URL:?Error: STRIPE_REFRESH_URL must be set (e.g., https://staging.servicelink.com/provider/onboarding/refresh)}
     depends_on:
       - postgres
       - redis
