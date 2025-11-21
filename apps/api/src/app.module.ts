@@ -35,7 +35,7 @@ import { ConfigService } from '@nestjs/config';
         if (url) {
           try {
             // eslint-disable-next-line @typescript-eslint/no-var-requires
-            const { ThrottlerStorageRedisService } = require('nestjs-throttler-storage-redis');
+            const { ThrottlerStorageRedisService } = require('@nest-lab/throttler-storage-redis');
             // eslint-disable-next-line @typescript-eslint/no-var-requires
             const IORedis = require('ioredis');
             const client = new IORedis(url);
