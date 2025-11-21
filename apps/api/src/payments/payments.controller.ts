@@ -50,8 +50,8 @@ export class PaymentsController {
   @Post('intents/:id/capture')
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Capture a Stripe PaymentIntent' })
-  async captureIntent(@Param('id') paymentIntentId: string) {
-    return this.payments.capturePayment(paymentIntentId);
+  async captureIntent(@Param('id') paymentIntentId: string, @Req() req: AuthedRequest) {
+    return this.payments.capturePayment(paymentIntentId, req.user.sub);
   }
 
   @Post('refunds')

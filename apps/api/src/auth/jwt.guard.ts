@@ -23,7 +23,11 @@ export class JwtAuthGuard implements CanActivate {
     if (!auth || !auth.startsWith('Bearer ')) throw new UnauthorizedException('Missing token');
     const token = auth.slice('Bearer '.length);
     try {
-      const payload = await this.jwt.verifyAsync(token, { secret: this.config.get<string>('JWT_SECRET', 'change-me') });
+      const secret = this.config.get<string>('JWT_SECRET');
+      if (!secret) {
+        throw new Error('JWT_SECRET environment variable is not configured');
+      }
+      const payload = await this.jwt.verifyAsync(token, { secret });
       req.user = payload;
       return true;
     } catch (e) {
