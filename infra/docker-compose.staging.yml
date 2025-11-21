@@ -1,3 +1,15 @@
+# Staging Docker Compose Configuration
+# ======================================
+# This file is for staging deployments with external databases.
+# Database connections must be configured via environment variables.
+#
+# REQUIRED Environment Variables:
+#   - DATABASE_URL: PostgreSQL connection string
+#   - REDIS_URL: Redis connection string
+#   - JWT_SECRET: Secure random string (generate with: openssl rand -base64 32)
+#   - STRIPE_RETURN_URL: Staging HTTPS URL for Stripe Connect return
+#   - STRIPE_REFRESH_URL: Staging HTTPS URL for Stripe Connect refresh
+
 version: '3.9'
 
 services:
@@ -9,11 +21,15 @@ services:
     environment:
       PORT: 3001
       NODE_ENV: production
-      DATABASE_URL: ${DATABASE_URL}
-      REDIS_URL: ${REDIS_URL}
-      JWT_SECRET: ${JWT_SECRET}
-      STRIPE_RETURN_URL: ${STRIPE_RETURN_URL:-http://localhost:3000/provider/onboarding/completed}
-      STRIPE_REFRESH_URL: ${STRIPE_REFRESH_URL:-http://localhost:3000/provider/onboarding/refresh}
+      # REQUIRED: External database URLs - must be set via environment variables
+      DATABASE_URL: ${DATABASE_URL:?Error: DATABASE_URL must be set for staging}
+      REDIS_URL: ${REDIS_URL:?Error: REDIS_URL must be set for staging}
+      # REQUIRED: Must be a secure random string - fail if not provided
+      # Generate with: openssl rand -base64 32
+      JWT_SECRET: ${JWT_SECRET:?Error: JWT_SECRET must be set for staging}
+      # REQUIRED: Must be staging HTTPS URLs - fail if not provided
+      STRIPE_RETURN_URL: ${STRIPE_RETURN_URL:?Error: STRIPE_RETURN_URL must be set (e.g., https://staging.servicelink.com/provider/onboarding/completed)}
+      STRIPE_REFRESH_URL: ${STRIPE_REFRESH_URL:?Error: STRIPE_REFRESH_URL must be set (e.g., https://staging.servicelink.com/provider/onboarding/refresh)}
     ports:
       - '3001:3001'
 

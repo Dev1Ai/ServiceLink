@@ -2,7 +2,7 @@ version: '3.9'
 
 services:
   postgres:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     container_name: servicelink-postgres
     restart: unless-stopped
     profiles: ["db", "dev", "obs"]
@@ -36,7 +36,9 @@ services:
       NODE_ENV: development
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/servicelink
       REDIS_URL: redis://redis:6379
-      JWT_SECRET: change-me
+      # WARNING: Default secret for LOCAL DEVELOPMENT ONLY
+      # NEVER use this in staging/production environments
+      JWT_SECRET: change-me-local-dev-only
       STRIPE_RETURN_URL: http://localhost:3000/provider/onboarding/completed
       STRIPE_REFRESH_URL: http://localhost:3000/provider/onboarding/refresh
     depends_on:

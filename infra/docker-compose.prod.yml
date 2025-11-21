@@ -1,3 +1,18 @@
+# Production Docker Compose Override
+# =====================================
+# This file assumes external managed databases (AWS RDS, ElastiCache, etc.)
+# Database connections must be configured via environment variables.
+#
+# REQUIRED Environment Variables:
+#   - DATABASE_URL: PostgreSQL connection string (e.g., postgresql://user:pass@rds-host:5432/servicelink?sslmode=require)
+#   - REDIS_URL: Redis connection string (e.g., redis://elasticache-host:6379)
+#   - JWT_SECRET: Secure random string (generate with: openssl rand -base64 32)
+#   - STRIPE_RETURN_URL: Production HTTPS URL for Stripe Connect return
+#   - STRIPE_REFRESH_URL: Production HTTPS URL for Stripe Connect refresh
+#
+# For self-hosted databases, use docker-compose.yml with this file:
+#   docker compose -f infra/docker-compose.yml -f infra/docker-compose.prod.yml up -d
+
 services:
   api:
     build:
@@ -7,11 +22,15 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3001
-      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/servicelink
-      - REDIS_URL=redis://redis:6379
-      - JWT_SECRET=${JWT_SECRET:-change-me}
-      - STRIPE_RETURN_URL=${STRIPE_RETURN_URL:-http://localhost:3000/provider/onboarding/completed}
-      - STRIPE_REFRESH_URL=${STRIPE_REFRESH_URL:-http://localhost:3000/provider/onboarding/refresh}
+      # REQUIRED: External database URLs - must be set via environment variables
+      - DATABASE_URL=${DATABASE_URL:?Error: DATABASE_URL must be set for production}
+      - REDIS_URL=${REDIS_URL:?Error: REDIS_URL must be set for production}
+      # REQUIRED: Must be a secure random string - fail if not provided
+      # Generate with: openssl rand -base64 32
+      - JWT_SECRET=${JWT_SECRET:?Error: JWT_SECRET must be set for production}
+      # REQUIRED: Must be production HTTPS URLs - fail if not provided
+      - STRIPE_RETURN_URL=${STRIPE_RETURN_URL:?Error: STRIPE_RETURN_URL must be set (e.g., https://servicelink.com/provider/onboarding/completed)}
+      - STRIPE_REFRESH_URL=${STRIPE_REFRESH_URL:?Error: STRIPE_REFRESH_URL must be set (e.g., https://servicelink.com/provider/onboarding/refresh)}
     depends_on:
       - postgres
       - redis
