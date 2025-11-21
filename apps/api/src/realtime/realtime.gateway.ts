@@ -133,9 +133,8 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection, OnGa
         const job = await this.prisma.job.findUnique({
           where: { key: jobKey },
           include: {
-            assignments: {
-              where: { providerId: userId },
-              select: { id: true },
+            assignment: {
+              select: { id: true, providerId: true },
             },
           },
         });
@@ -147,7 +146,7 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection, OnGa
 
         // Only allow customer, assigned provider, or admin
         const isCustomer = job.customerId === userId;
-        const isAssignedProvider = job.assignments.length > 0;
+        const isAssignedProvider = job.assignment !== null && job.assignment.providerId === userId;
         const isAdmin = (client.data as { role?: string }).role === 'ADMIN';
 
         if (!isCustomer && !isAssignedProvider && !isAdmin) {
@@ -207,9 +206,8 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection, OnGa
         const job = await this.prisma.job.findUnique({
           where: { key },
           include: {
-            assignments: {
-              where: { providerId: userId },
-              select: { id: true },
+            assignment: {
+              select: { id: true, providerId: true },
             },
           },
         });
@@ -221,7 +219,7 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection, OnGa
 
         // Verify authorization again (defensive check)
         const isCustomer = job.customerId === userId;
-        const isAssignedProvider = job.assignments.length > 0;
+        const isAssignedProvider = job.assignment !== null && job.assignment.providerId === userId;
         const isAdmin = role === 'ADMIN';
 
         if (!isCustomer && !isAssignedProvider && !isAdmin) {
