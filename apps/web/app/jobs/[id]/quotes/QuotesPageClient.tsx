@@ -338,6 +338,7 @@ export default function QuotesPageClient({ params }: { params: { id: string } })
   return (
     <div className="container">
       <h2>Quotes for Job {isPlaceholder ? '(static placeholder)' : id}</h2>
+      <div style={{ display: 'none' }} data-testid="debug-info">{JSON.stringify(debugInfo)}</div>
       {isPlaceholder && (
         <div className="alert alert-error">
           Static export placeholder — use /jobs/quotes?id=YOUR_JOB_ID when hosting the export.
@@ -345,7 +346,6 @@ export default function QuotesPageClient({ params }: { params: { id: string } })
       )}
       {job && (
         <div className="mb-12 text-subtle">
-          <div style={{ display: 'none' }} data-testid="debug-info">{JSON.stringify(debugInfo)}</div>
           <div><strong>{job.title}</strong></div>
           <div className="font-13">{job.description}</div>
           {job.assignment && (
