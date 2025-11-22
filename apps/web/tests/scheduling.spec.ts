@@ -10,13 +10,19 @@ test.describe('Scheduling workflow', () => {
   test.skip(!process.env.E2E_API_BASE, 'E2E_API_BASE not set');
 
   test.skip('customer proposes schedule, provider confirms then rejects', async ({ page, request }) => {
-    // SKIP: This test is flaky due to UI timing issues with the "Reject assignment" section
-    // After schedule confirmation, the component calls load() to refresh data, but the
-    // "Reject assignment" button doesn't reliably appear even with explicit waits (tried 2s).
-    // The conditional rendering depends on: role === 'PROVIDER' && assignment.status !== 'provider_rejected'
-    // Both conditions should be met, but the section doesn't render consistently in CI.
-    // TODO: Investigate component state management or add a manual refresh trigger
+    // SKIP: This test is consistently failing in CI because the "Reject assignment" section
+    // (h4 with "Reject assignment" text) never renders even after multiple refresh attempts
+    // and network idle waits. The conditional rendering at QuotesPageClient.tsx:433 requires:
+    // role === 'PROVIDER' && job.assignment.status !== 'provider_rejected'
+    //
+    // Investigation needed:
+    // 1. Verify JWT role decoding works correctly for provider token
+    // 2. Verify assignment status after schedule confirmation is correct
+    // 3. Consider if component state management has race conditions
+    // 4. May need to add a data-testid to the section for reliable querying
+    //
     // For now, the workflow is covered by unit tests in assignments.service.spec.ts
+    // Tracked in Issue #19
     test.setTimeout(60000); // Increase timeout to 60s for this complex workflow
     const api = process.env.E2E_API_BASE as string;
 
@@ -93,14 +99,30 @@ test.describe('Scheduling workflow', () => {
     await expect(page.locator('text=Status: scheduled')).toBeVisible({ timeout: 15000 });
     await expect(page.locator('text=Version: 2')).toBeVisible({ timeout: 15000 });
 
-    // Wait a moment for the load() function to complete and component to re-render
-    // After schedule confirmation, the component calls load() which may take a moment
-    await page.waitForTimeout(2000);
+    // Wait for the status to update to 'scheduled' before proceeding
+    // This ensures the backend has processed the confirmation
+    await expect(page.locator('text=Status: scheduled')).toBeVisible({ timeout: 15000 });
 
-    // Wait for the reject assignment button (provider role required)
-    // It should appear automatically after schedule confirmation for provider role
+    // Explicitly wait for network to be idle to ensure all state updates complete
+    await page.waitForLoadState('networkidle', { timeout: 10000 });
+
+    // Click the Refresh button to ensure the component reloads with updated state
+    await page.getByRole('button', { name: 'Refresh' }).click();
+
+    // Wait for refresh to complete - check both status and version are visible
+    await expect(page.locator('text=Status: scheduled')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('text=Version: 2')).toBeVisible({ timeout: 10000 });
+
+    // Wait for page to be fully loaded after refresh
+    await page.waitForLoadState('networkidle', { timeout: 10000 });
+
+    // Now the reject assignment section should be visible
+    // First check for the section heading
+    await expect(page.locator('h4', { hasText: 'Reject assignment' })).toBeVisible({ timeout: 15000 });
+
+    // Then locate the reject button
     const rejectBtn = page.getByRole('button', { name: 'Reject assignment and reopen job' });
-    await expect(rejectBtn).toBeVisible({ timeout: 15000 });
+    await expect(rejectBtn).toBeVisible({ timeout: 10000 });
 
     // Fill in rejection reason
     const reasonField = page.getByLabel('Reason (optional)').last();  // Use .last() to get the reject reason field, not schedule notes

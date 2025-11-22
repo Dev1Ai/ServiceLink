@@ -44,12 +44,21 @@ test.describe('Customer verifies completion', () => {
 
     await page.goto(`/jobs/${encodeURIComponent(job.id)}/quotes`);
 
+    // Wait for quotes to load first
+    await expect(page.locator('.card').first()).toBeVisible({ timeout: 10000 });
+
     // Accept the quote (by amount - displayed as dollars, e.g., $333.33 for 33333 cents)
     const displayedAmount = (totalCents / 100).toFixed(2);
     const card = page.locator('.card').filter({ hasText: `Quote: $${displayedAmount}` }).first();
     await expect(card).toBeVisible({ timeout: 10000 });
     await card.getByRole('button', { name: /Accept/ }).click();
+
+    // Wait for the acceptance to be processed
     await expect(card.locator('text=Status: accepted')).toBeVisible({ timeout: 10000 });
+
+    // Click refresh to ensure state is fully updated before verifying
+    await page.getByRole('button', { name: 'Refresh' }).click();
+    await expect(page.locator('text=Status: accepted')).toBeVisible({ timeout: 10000 });
 
     // Verify completion
     const verifyBtn = page.getByRole('button', { name: /Verify completion/ });
