@@ -13,13 +13,10 @@ export function useLocalToken(key = 'jwt') {
 
   useEffect(() => {
     try {
-      const t = localStorage.getItem(key) || '';
-      setToken(t);
+      if (token) {
+        localStorage.setItem(key, token);
+      }
     } catch {}
-  }, [key]);
-
-  useEffect(() => {
-    try { localStorage.setItem(key, token); } catch {}
   }, [key, token]);
 
   return [token, setToken] as const;
