@@ -2,16 +2,26 @@
 import { useEffect, useState } from 'react';
 
 export function useLocalToken(key = 'jwt') {
-  const [token, setToken] = useState('');
+  const [token, setToken] = useState(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        return localStorage.getItem(key) || '';
+      } catch {}
+    }
+    return '';
+  });
+
   useEffect(() => {
     try {
       const t = localStorage.getItem(key) || '';
-      if (t) setToken(t);
+      setToken(t);
     } catch {}
   }, [key]);
+
   useEffect(() => {
     try { localStorage.setItem(key, token); } catch {}
   }, [key, token]);
+
   return [token, setToken] as const;
 }
 

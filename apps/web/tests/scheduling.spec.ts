@@ -9,20 +9,7 @@ const toLocalInput = (date: Date) => {
 test.describe('Scheduling workflow', () => {
   test.skip(!process.env.E2E_API_BASE, 'E2E_API_BASE not set');
 
-  test.skip('customer proposes schedule, provider confirms then rejects', async ({ page, request }) => {
-    // SKIP: This test is consistently failing in CI because the "Reject assignment" section
-    // (h4 with "Reject assignment" text) never renders even after multiple refresh attempts
-    // and network idle waits. The conditional rendering at QuotesPageClient.tsx:433 requires:
-    // role === 'PROVIDER' && job.assignment.status !== 'provider_rejected'
-    //
-    // Investigation needed:
-    // 1. Verify JWT role decoding works correctly for provider token
-    // 2. Verify assignment status after schedule confirmation is correct
-    // 3. Consider if component state management has race conditions
-    // 4. May need to add a data-testid to the section for reliable querying
-    //
-    // For now, the workflow is covered by unit tests in assignments.service.spec.ts
-    // Tracked in Issue #19
+  test('customer proposes schedule, provider confirms then rejects', async ({ page, request }) => {
     test.setTimeout(60000); // Increase timeout to 60s for this complex workflow
     const api = process.env.E2E_API_BASE as string;
 
