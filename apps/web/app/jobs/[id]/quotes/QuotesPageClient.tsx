@@ -45,7 +45,10 @@ const decodeJwtRole = (token: string): string => {
   if (typeof window === 'undefined' || !token || token.split('.').length < 2) return '';
   try {
     const payload = token.split('.')[1];
-    const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
+    let normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
+    while (normalized.length % 4) {
+      normalized += '=';
+    }
     const decoded = atob(normalized);
     const data = JSON.parse(decoded);
     const role = data?.role || data?.Role;
@@ -80,6 +83,9 @@ export default function QuotesPageClient({ params }: { params: { id: string } })
   const [rejectReason, setRejectReason] = useState('');
   const { push } = useToast();
   const role = useMemo(() => decodeJwtRole(token), [token]);
+
+  // Debug element to help trace test failures
+  const debugInfo = { role, status: job?.assignment?.status, hasJob: !!job, hasAssignment: !!job?.assignment };
 
   useEffect(() => {
     const id = setInterval(() => forceTick((n) => n + 1), 1000);
@@ -332,6 +338,7 @@ export default function QuotesPageClient({ params }: { params: { id: string } })
   return (
     <div className="container">
       <h2>Quotes for Job {isPlaceholder ? '(static placeholder)' : id}</h2>
+      <div style={{ display: 'none' }} data-testid="debug-info">{JSON.stringify(debugInfo)}</div>
       {isPlaceholder && (
         <div className="alert alert-error">
           Static export placeholder — use /jobs/quotes?id=YOUR_JOB_ID when hosting the export.
@@ -431,7 +438,7 @@ export default function QuotesPageClient({ params }: { params: { id: string } })
                 </div>
               )}
               {role === 'PROVIDER' && job.assignment.status !== 'provider_rejected' && (
-                <div className="mt-12 grid gap-6">
+                <div className="mt-12 grid gap-6" data-testid="reject-assignment-section">
                   <h4 className="font-14 text-error">Reject assignment</h4>
                   <label className="grid gap-4">
                     <span>Reason (optional)</span>
