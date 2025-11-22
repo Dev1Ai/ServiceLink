@@ -78,6 +78,20 @@ test.describe('Scheduling workflow', () => {
     }, provToken);
     await page.reload();
 
+    // Wait for the component to re-render with the new token
+    // The role should change from CUSTOMER to PROVIDER
+    await page.waitForFunction(() => {
+      try {
+        const debugEl = document.querySelector('[data-testid="debug-info"]');
+        if (!debugEl) return false;
+        const info = JSON.parse(debugEl.textContent || '{}');
+        return info.role === 'PROVIDER';
+      } catch {
+        return false;
+      }
+    }, { timeout: 10000 });
+
+
     await expect(page.locator('text=Version: 1')).toBeVisible({ timeout: 10000 });
     await page.getByLabel('Confirmation notes (optional)').fill('Provider confirms arrival');
     await page.getByRole('button', { name: 'Confirm schedule' }).click();
