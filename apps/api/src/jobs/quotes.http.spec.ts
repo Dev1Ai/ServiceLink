@@ -34,7 +34,7 @@ describe('Jobs/Quotes HTTP (E2E-lite)', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: MetricsService, useValue: metrics },
         { provide: JobsService, useValue: { createJob: jest.fn() } },
-        NotificationsService,
+        { provide: NotificationsService, useValue: { notifyQuoteCreated: jest.fn(), notifyQuoteAccepted: jest.fn(), notifyAcceptanceRevoked: jest.fn() } },
         { provide: AssignmentsService, useValue: { proposeScheduleAsCustomer: jest.fn() } },
         { provide: PaymentsService, useValue: payments },
         QuotesService,
