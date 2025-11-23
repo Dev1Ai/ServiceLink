@@ -318,6 +318,22 @@ model DeviceToken {
   @@index([platform])
 }
 
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String // NotificationType enum value
+  title     String
+  body      String
+  data      Json     @default("{}")
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([read])
+  @@index([createdAt])
+  @@index([userId, read])
+}
+
 // M11 Phase 2: GPS Features
 enum CheckpointType {
   CHECK_IN
