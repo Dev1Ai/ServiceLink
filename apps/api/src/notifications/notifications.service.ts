@@ -322,16 +322,15 @@ export class NotificationsService implements OnModuleInit {
    */
   async sendNotification(userId: string, type: NotificationType, title: string, body: string, data?: Record<string, unknown>) {
     // Store notification in database
-    // TODO: Re-enable once Prisma Client is regenerated with Notification model
-    // await this.prisma.notification.create({
-    //   data: {
-    //     userId,
-    //     type,
-    //     title,
-    //     body,
-    //     data: data ?? {},
-    //   },
-    // });
+    await this.prisma.notification.create({
+      data: {
+        userId,
+        type,
+        title,
+        body,
+        data: (data ?? {}) as any,
+      },
+    });
 
     // Get active device tokens for user
     const deviceTokens = await this.prisma.deviceToken.findMany({
@@ -387,5 +386,73 @@ export class NotificationsService implements OnModuleInit {
     } else {
       this.logger.log(`[DRY RUN] Would send "${title}" to ${deviceTokens.length} devices for user ${userId}`);
     }
+  }
+
+  /**
+   * Get notification history for a user
+   * @param userId User ID
+   * @param limit Maximum number of notifications to return
+   * @param unreadOnly Only return unread notifications
+   */
+  async getNotifications(userId: string, limit = 50, unreadOnly = false) {
+    return this.prisma.notification.findMany({
+      where: {
+        userId,
+        ...(unreadOnly && { read: false }),
+      },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+    });
+  }
+
+  /**
+   * Mark a notification as read
+   * @param notificationId Notification ID
+   * @param userId User ID (for authorization)
+   */
+  async markAsRead(notificationId: string, userId: string) {
+    const notification = await this.prisma.notification.findUnique({
+      where: { id: notificationId },
+    });
+
+    if (!notification) {
+      throw new Error('Notification not found');
+    }
+
+    if (notification.userId !== userId) {
+      throw new Error('Not authorized');
+    }
+
+    return this.prisma.notification.update({
+      where: { id: notificationId },
+      data: { read: true },
+    });
+  }
+
+  /**
+   * Mark all notifications as read for a user
+   * @param userId User ID
+   */
+  async markAllAsRead(userId: string) {
+    return this.prisma.notification.updateMany({
+      where: {
+        userId,
+        read: false,
+      },
+      data: { read: true },
+    });
+  }
+
+  /**
+   * Get unread notification count for a user
+   * @param userId User ID
+   */
+  async getUnreadCount(userId: string): Promise<number> {
+    return this.prisma.notification.count({
+      where: {
+        userId,
+        read: false,
+      },
+    });
   }
 }
