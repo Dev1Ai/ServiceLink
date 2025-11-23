@@ -1,5 +1,4 @@
-import { IsNotEmpty, IsNumber, IsOptional, IsString, IsEnum, IsDateString } from 'class-validator';
-import { CheckpointType } from '@prisma/client';
+import { IsNotEmpty, IsNumber, IsOptional, IsString, IsDateString } from 'class-validator';
 
 export class CreateCheckpointDto {
   @IsNotEmpty()
