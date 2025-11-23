@@ -3,7 +3,7 @@ import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } fro
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { PrismaService } from '../prisma/prisma.service';
 import { PhotoContextType } from '@prisma/client';
-import * as sharp from 'sharp';
+import sharp from 'sharp';
 import { Readable } from 'stream';
 
 /**
@@ -104,7 +104,7 @@ export class PhotosService {
       width?: number;
       height?: number;
     },
-  ): Promise<any> {
+  ) {
     const photo = await this.prisma.photo.findUnique({
       where: { id: photoId },
     });
@@ -144,7 +144,7 @@ export class PhotosService {
     contextType: PhotoContextType,
     contextId: string,
     userId?: string,
-  ): Promise<any[]> {
+  ) {
     return this.prisma.photo.findMany({
       where: {
         contextType,
