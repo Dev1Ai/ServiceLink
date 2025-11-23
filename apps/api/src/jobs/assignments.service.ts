@@ -6,11 +6,12 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { AssignmentReminderStatus, AssignmentPayoutStatus, ScheduleProposedBy } from '@prisma/client';
+import { AssignmentReminderStatus, AssignmentPayoutStatus, ScheduleProposedBy, CheckpointType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationType } from '../notifications/notification.types';
 import { ProposeScheduleDto, ConfirmScheduleDto, RejectAssignmentDto } from './dto/schedule.dto';
+import { CheckInDto, CheckOutDto, CreateLocationUpdateDto } from './dto/checkpoint.dto';
 
 export const ASSIGNMENT_STATUS = {
   PENDING_SCHEDULE: 'pending_schedule',
@@ -280,5 +281,230 @@ export class AssignmentsService {
       throw new NotFoundException('Assignment not found after update');
     }
     return refreshed;
+  }
+
+  // M11 Phase 2: GPS Features
+
+  /**
+   * Provider check-in to job site
+   */
+  async checkIn(assignmentId: string, providerUserId: string, dto: CheckInDto) {
+    // Verify provider owns this assignment
+    const assignment = await this.prisma.assignment.findUnique({
+      where: { id: assignmentId },
+      select: {
+        id: true,
+        provider: { select: { userId: true } },
+        status: true,
+      },
+    });
+
+    if (!assignment) {
+      throw new NotFoundException('Assignment not found');
+    }
+
+    if (assignment.provider.userId !== providerUserId) {
+      throw new ForbiddenException('Not allowed');
+    }
+
+    if (assignment.status !== ASSIGNMENT_STATUS.SCHEDULED) {
+      throw new BadRequestException('Assignment must be scheduled before check-in');
+    }
+
+    // Create checkpoint
+    const checkpoint = await this.prisma.assignmentCheckpoint.create({
+      data: {
+        assignmentId,
+        type: CheckpointType.CHECK_IN,
+        latitude: dto.latitude,
+        longitude: dto.longitude,
+        accuracy: dto.accuracy,
+        timestamp: new Date(dto.timestamp),
+        photoUrl: dto.photoUrl,
+        notes: dto.notes,
+      },
+    });
+
+    this.logger.log(`Provider checked in to assignment ${assignmentId}`);
+
+    // TODO: Send notification to customer
+    // await this.notifications.notifyCheckIn({ assignmentId });
+
+    return checkpoint;
+  }
+
+  /**
+   * Provider check-out from job site
+   */
+  async checkOut(assignmentId: string, providerUserId: string, dto: CheckOutDto) {
+    // Verify provider owns this assignment
+    const assignment = await this.prisma.assignment.findUnique({
+      where: { id: assignmentId },
+      select: {
+        id: true,
+        provider: { select: { userId: true } },
+        status: true,
+        checkpoints: {
+          where: { type: CheckpointType.CHECK_IN },
+          orderBy: { timestamp: 'desc' },
+          take: 1,
+        },
+      },
+    });
+
+    if (!assignment) {
+      throw new NotFoundException('Assignment not found');
+    }
+
+    if (assignment.provider.userId !== providerUserId) {
+      throw new ForbiddenException('Not allowed');
+    }
+
+    // Ensure provider has checked in
+    if (assignment.checkpoints.length === 0) {
+      throw new BadRequestException('Must check in before checking out');
+    }
+
+    // Create checkout checkpoint
+    const checkpoint = await this.prisma.assignmentCheckpoint.create({
+      data: {
+        assignmentId,
+        type: CheckpointType.CHECK_OUT,
+        latitude: dto.latitude,
+        longitude: dto.longitude,
+        accuracy: dto.accuracy,
+        timestamp: new Date(dto.timestamp),
+        photoUrl: dto.photoUrl,
+        notes: dto.notes,
+      },
+    });
+
+    this.logger.log(`Provider checked out from assignment ${assignmentId}`);
+
+    // TODO: Send notification to customer
+    // await this.notifications.notifyCheckOut({ assignmentId });
+
+    return checkpoint;
+  }
+
+  /**
+   * Get checkpoints for an assignment
+   */
+  async getCheckpoints(assignmentId: string, userId: string) {
+    // Verify user has access to this assignment
+    const assignment = await this.prisma.assignment.findUnique({
+      where: { id: assignmentId },
+      select: {
+        id: true,
+        provider: { select: { userId: true } },
+        job: { select: { customerId: true } },
+      },
+    });
+
+    if (!assignment) {
+      throw new NotFoundException('Assignment not found');
+    }
+
+    const isProvider = assignment.provider.userId === userId;
+    const isCustomer = assignment.job.customerId === userId;
+
+    if (!isProvider && !isCustomer) {
+      throw new ForbiddenException('Not allowed');
+    }
+
+    return this.prisma.assignmentCheckpoint.findMany({
+      where: { assignmentId },
+      orderBy: { timestamp: 'asc' },
+    });
+  }
+
+  /**
+   * Update provider location (real-time tracking)
+   */
+  async updateLocation(assignmentId: string, providerUserId: string, dto: CreateLocationUpdateDto) {
+    // Verify provider owns this assignment
+    const assignment = await this.prisma.assignment.findUnique({
+      where: { id: assignmentId },
+      select: {
+        id: true,
+        provider: { select: { userId: true } },
+        status: true,
+      },
+    });
+
+    if (!assignment) {
+      throw new NotFoundException('Assignment not found');
+    }
+
+    if (assignment.provider.userId !== providerUserId) {
+      throw new ForbiddenException('Not allowed');
+    }
+
+    // Only allow location updates for scheduled assignments
+    if (assignment.status !== ASSIGNMENT_STATUS.SCHEDULED) {
+      throw new BadRequestException('Can only update location for scheduled assignments');
+    }
+
+    // Rate limit: Check if last update was less than 30 seconds ago
+    const thirtySecondsAgo = new Date(Date.now() - 30 * 1000);
+    const recentUpdate = await this.prisma.locationUpdate.findFirst({
+      where: {
+        assignmentId,
+        createdAt: { gte: thirtySecondsAgo },
+      },
+    });
+
+    if (recentUpdate) {
+      throw new BadRequestException('Location updates are rate limited to once per 30 seconds');
+    }
+
+    // Create location update
+    const locationUpdate = await this.prisma.locationUpdate.create({
+      data: {
+        assignmentId,
+        latitude: dto.latitude,
+        longitude: dto.longitude,
+        accuracy: dto.accuracy,
+        timestamp: new Date(dto.timestamp),
+      },
+    });
+
+    this.logger.debug(`Location updated for assignment ${assignmentId}`);
+
+    return locationUpdate;
+  }
+
+  /**
+   * Get latest provider location
+   */
+  async getLatestLocation(assignmentId: string, customerId: string) {
+    // Verify customer owns the job
+    const assignment = await this.prisma.assignment.findUnique({
+      where: { id: assignmentId },
+      select: {
+        id: true,
+        job: { select: { customerId: true } },
+      },
+    });
+
+    if (!assignment) {
+      throw new NotFoundException('Assignment not found');
+    }
+
+    if (assignment.job.customerId !== customerId) {
+      throw new ForbiddenException('Not allowed');
+    }
+
+    // Get latest location update (within last hour)
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    const latestLocation = await this.prisma.locationUpdate.findFirst({
+      where: {
+        assignmentId,
+        timestamp: { gte: oneHourAgo },
+      },
+      orderBy: { timestamp: 'desc' },
+    });
+
+    return latestLocation;
   }
 }

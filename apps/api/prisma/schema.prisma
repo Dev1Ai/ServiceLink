@@ -146,6 +146,8 @@ model Assignment {
   payoutApprovedAt   DateTime?
   createdAt          DateTime                 @default(now())
   updatedAt          DateTime                 @updatedAt
+  checkpoints        AssignmentCheckpoint[]
+  locationUpdates    LocationUpdate[]
 
   @@index([status])
   @@index([reminderStatus])
@@ -314,4 +316,68 @@ model DeviceToken {
   @@index([userId])
   @@index([active])
   @@index([platform])
+}
+
+// M11 Phase 2: GPS Features
+enum CheckpointType {
+  CHECK_IN
+  CHECK_OUT
+}
+
+model AssignmentCheckpoint {
+  id           String         @id @default(cuid())
+  assignmentId String
+  assignment   Assignment     @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  type         CheckpointType
+  latitude     Float
+  longitude    Float
+  accuracy     Float? // GPS accuracy in meters
+  timestamp    DateTime
+  photoUrl     String?
+  notes        String?
+  createdAt    DateTime       @default(now())
+
+  @@index([assignmentId])
+  @@index([type])
+  @@index([timestamp])
+}
+
+model LocationUpdate {
+  id           String     @id @default(cuid())
+  assignmentId String
+  assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  latitude     Float
+  longitude    Float
+  accuracy     Float // GPS accuracy in meters
+  timestamp    DateTime
+  createdAt    DateTime   @default(now())
+
+  @@index([assignmentId, timestamp])
+}
+
+enum PhotoContextType {
+  JOB
+  CHECK_IN
+  CHECK_OUT
+  CHAT
+  INVOICE
+}
+
+model Photo {
+  id           String           @id @default(cuid())
+  userId       String
+  url          String
+  thumbnailUrl String?
+  filename     String
+  contentType  String
+  size         Int
+  width        Int?
+  height       Int?
+  contextType  PhotoContextType
+  contextId    String // ID of the related entity (job, assignment, etc.)
+  metadata     Json? // Additional metadata
+  createdAt    DateTime         @default(now())
+
+  @@index([userId])
+  @@index([contextType, contextId])
 }
