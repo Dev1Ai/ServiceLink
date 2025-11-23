@@ -2,6 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateJobDto } from './dto/job.dto';
 import { PiiService } from '../pii/pii.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/notification.types';
 
 @Injectable()
 export class JobsService {
@@ -10,6 +12,7 @@ export class JobsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly pii: PiiService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   /**
@@ -39,6 +42,29 @@ export class JobsService {
     });
 
     this.logger.log(`Created job ${job.id} (${job.key}) for customer ${customerId}`);
+
+    // Notify all online providers about new job opportunity
+    const providers = await this.prisma.provider.findMany({
+      where: { online: true },
+      include: { user: true },
+    });
+
+    for (const provider of providers) {
+      await this.notifications.sendNotification(
+        provider.userId,
+        NotificationType.JOB_CREATED,
+        'New Job Available',
+        `${dto.title} - Check out this new job opportunity`,
+        {
+          jobId: job.id,
+          jobKey: job.key,
+          jobTitle: dto.title,
+        }
+      ).catch(err => {
+        this.logger.error(`Failed to send JOB_CREATED notification to provider ${provider.id}:`, err);
+      });
+    }
+
     return job;
   }
 

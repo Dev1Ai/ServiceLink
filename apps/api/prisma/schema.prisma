@@ -26,7 +26,7 @@ model User {
 
   profile      Profile?
   provider     Provider?
-  jobs         Job[]           @relation("UserJobs")
+  jobs         Job[]         @relation("UserJobs")
   messages     ChatMessage[]
   payments     Payment[]
   deviceTokens DeviceToken[]
@@ -107,45 +107,45 @@ model ChatMessage {
 }
 
 model Quote {
-  id         String   @id @default(cuid())
+  id         String    @id @default(cuid())
   jobId      String
-  job        Job      @relation(fields: [jobId], references: [id])
+  job        Job       @relation(fields: [jobId], references: [id])
   providerId String
-  provider   Provider @relation(fields: [providerId], references: [id])
+  provider   Provider  @relation(fields: [providerId], references: [id])
   total      Int
   notes      String?
   expiresAt  DateTime?
-  status     String   @default("pending")
-  createdAt  DateTime @default(now())
+  status     String    @default("pending")
+  createdAt  DateTime  @default(now())
 
   @@unique([jobId, providerId])
 }
 
 model Assignment {
-  id                 String                      @id @default(cuid())
-  jobId              String                      @unique
-  job                Job                         @relation(fields: [jobId], references: [id])
+  id                 String                   @id @default(cuid())
+  jobId              String                   @unique
+  job                Job                      @relation(fields: [jobId], references: [id])
   providerId         String
-  provider           Provider                    @relation(fields: [providerId], references: [id])
-  acceptedAt         DateTime                    @default(now())
-  status             String                      @default("pending_schedule")
+  provider           Provider                 @relation(fields: [providerId], references: [id])
+  acceptedAt         DateTime                 @default(now())
+  status             String                   @default("pending_schedule")
   scheduledStart     DateTime?
   scheduledEnd       DateTime?
   scheduleProposedBy ScheduleProposedBy?
   scheduleProposedAt DateTime?
-  scheduleVersion    Int                         @default(0)
+  scheduleVersion    Int                      @default(0)
   scheduleNotes      String?
   completedAt        DateTime?
   customerVerifiedAt DateTime?
   rejectedAt         DateTime?
-  reminderStatus     AssignmentReminderStatus    @default(NONE)
+  reminderStatus     AssignmentReminderStatus @default(NONE)
   reminderLastSentAt DateTime?
-  reminderCount      Int                         @default(0)
-  payoutStatus       AssignmentPayoutStatus      @default(PENDING)
+  reminderCount      Int                      @default(0)
+  payoutStatus       AssignmentPayoutStatus   @default(PENDING)
   payoutApprovedBy   String?
   payoutApprovedAt   DateTime?
-  createdAt          DateTime                    @default(now())
-  updatedAt          DateTime                    @updatedAt
+  createdAt          DateTime                 @default(now())
+  updatedAt          DateTime                 @updatedAt
 
   @@index([status])
   @@index([reminderStatus])
@@ -170,43 +170,43 @@ model Payment {
 }
 
 model Refund {
-  id                String   @id @default(cuid())
-  paymentId         String
-  payment           Payment  @relation(fields: [paymentId], references: [id])
-  stripeRefundId    String?
-  amount            Int
-  reason            String?
-  status            String   @default("pending")
-  createdAt         DateTime @default(now())
-  processedAt       DateTime?
+  id             String    @id @default(cuid())
+  paymentId      String
+  payment        Payment   @relation(fields: [paymentId], references: [id])
+  stripeRefundId String?
+  amount         Int
+  reason         String?
+  status         String    @default("pending")
+  createdAt      DateTime  @default(now())
+  processedAt    DateTime?
 
   @@index([paymentId])
   @@index([status])
 }
 
 model Review {
-  id            String   @id @default(cuid())
-  jobId         String
-  raterUserId   String
-  rateeUserId   String
-  stars         Int
-  comment       String?
-  createdAt     DateTime @default(now())
+  id          String   @id @default(cuid())
+  jobId       String
+  raterUserId String
+  rateeUserId String
+  stars       Int
+  comment     String?
+  createdAt   DateTime @default(now())
 
   @@unique([jobId, raterUserId])
   @@index([rateeUserId])
 }
 
 model Payout {
-  id                String   @id @default(cuid())
-  providerId        String
-  stripeTransferId  String?
-  amount            Int
-  currency          String   @default("usd")
-  status            String   @default("pending")
-  createdAt         DateTime @default(now())
-  processedAt       DateTime?
-  failureReason     String?
+  id               String    @id @default(cuid())
+  providerId       String
+  stripeTransferId String?
+  amount           Int
+  currency         String    @default("usd")
+  status           String    @default("pending")
+  createdAt        DateTime  @default(now())
+  processedAt      DateTime?
+  failureReason    String?
 
   @@index([providerId])
   @@index([status])
@@ -234,13 +234,13 @@ enum AssignmentPayoutStatus {
 }
 
 model KnowledgeBase {
-  id          String                 @id @default(cuid())
-  title       String
-  content     String
-  category    String
-  embedding   Unsupported("vector")?
-  createdAt   DateTime               @default(now())
-  updatedAt   DateTime               @updatedAt
+  id        String                 @id @default(cuid())
+  title     String
+  content   String
+  category  String
+  embedding Unsupported("vector")?
+  createdAt DateTime               @default(now())
+  updatedAt DateTime               @updatedAt
 
   @@index([category])
 }
@@ -253,16 +253,16 @@ enum LoyaltyTier {
 }
 
 model LoyaltyAccount {
-  id               String              @id @default(cuid())
-  userId           String              @unique
-  points           Int                 @default(0)
-  tier             LoyaltyTier         @default(BRONZE)
-  lifetimePoints   Int                 @default(0)
-  lifetimeSpent    Int                 @default(0)
-  createdAt        DateTime            @default(now())
-  updatedAt        DateTime            @updatedAt
-  transactions     LoyaltyTransaction[]
-  rewards          LoyaltyReward[]
+  id             String               @id @default(cuid())
+  userId         String               @unique
+  points         Int                  @default(0)
+  tier           LoyaltyTier          @default(BRONZE)
+  lifetimePoints Int                  @default(0)
+  lifetimeSpent  Int                  @default(0)
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  transactions   LoyaltyTransaction[]
+  rewards        LoyaltyReward[]
 
   @@index([tier])
   @@index([points])
@@ -273,7 +273,7 @@ model LoyaltyTransaction {
   accountId   String
   account     LoyaltyAccount @relation(fields: [accountId], references: [id])
   points      Int
-  type        String         // EARN, REDEEM, EXPIRE, ADJUSTMENT
+  type        String // EARN, REDEEM, EXPIRE, ADJUSTMENT
   description String
   jobId       String?
   createdAt   DateTime       @default(now())
@@ -287,13 +287,13 @@ model LoyaltyReward {
   id          String         @id @default(cuid())
   accountId   String
   account     LoyaltyAccount @relation(fields: [accountId], references: [id])
-  type        String         // DISCOUNT_PERCENT, DISCOUNT_FIXED, FREE_SERVICE
-  value       Int            // percentage (e.g., 10 for 10%) or fixed amount in cents
+  type        String // DISCOUNT_PERCENT, DISCOUNT_FIXED, FREE_SERVICE
+  value       Int // percentage (e.g., 10 for 10%) or fixed amount in cents
   description String
   code        String?        @unique
   expiresAt   DateTime?
   redeemedAt  DateTime?
-  jobId       String?        // Job where reward was redeemed
+  jobId       String? // Job where reward was redeemed
   createdAt   DateTime       @default(now())
 
   @@index([accountId])
@@ -306,7 +306,7 @@ model DeviceToken {
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   token     String   @unique
-  platform  String   // ios, android, web
+  platform  String // ios, android, web
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

@@ -10,6 +10,7 @@ describe('AssignmentsService', () => {
     notifyScheduleProposed: jest.fn(),
     notifyScheduleConfirmed: jest.fn(),
     notifyAssignmentRejected: jest.fn(),
+    sendNotification: jest.fn().mockResolvedValue(undefined),
   };
 
   const prisma: any = {
@@ -176,7 +177,12 @@ describe('AssignmentsService', () => {
   });
 
   it('marks assignment complete for provider', async () => {
-    prisma.assignment.findUnique.mockResolvedValue({ id: 'assign1', status: ASSIGNMENT_STATUS.SCHEDULED, provider: { userId: 'provider-123' } });
+    prisma.assignment.findUnique.mockResolvedValue({
+      id: 'assign1',
+      status: ASSIGNMENT_STATUS.SCHEDULED,
+      provider: { userId: 'provider-123', user: { name: 'Provider Name' } },
+      job: { customerId: 'cust1', title: 'Test Job' },
+    });
     prisma.assignment.update.mockResolvedValue({ id: 'assign1', status: ASSIGNMENT_STATUS.COMPLETED });
 
     const result = await service.completeAssignmentAsProvider('assign1', 'provider-123');

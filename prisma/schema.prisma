@@ -22,11 +22,13 @@ model User {
   status    String   @default("active")
   createdAt DateTime @default(now())
 
-  profile   Profile?
-  provider  Provider?
-  jobs      Job[]         @relation("UserJobs")
-  messages  ChatMessage[]
-  payments  Payment[]
+  profile       Profile?
+  provider      Provider?
+  jobs          Job[]           @relation("UserJobs")
+  messages      ChatMessage[]
+  payments      Payment[]
+  deviceTokens  DeviceToken[]
+  notifications Notification[]
 }
 
 model Profile {
@@ -176,4 +178,35 @@ enum AssignmentPayoutStatus {
   APPROVED
   PAID
   BLOCKED
+}
+
+model DeviceToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  token     String   @unique
+  platform  String   // ios, android, web
+  active    Boolean  @default(true)
+  lastUsed  DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([active])
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  type      String
+  title     String
+  body      String
+  data      Json?
+  read      Boolean   @default(false)
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@index([read])
 }

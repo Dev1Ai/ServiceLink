@@ -2,20 +2,29 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { JobsService } from './jobs.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { PiiService } from '../pii/pii.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 describe('JobsService', () => {
   let service: JobsService;
   let prisma: PrismaService;
   let pii: PiiService;
+  let notifications: NotificationsService;
 
   const prismaMock = {
     job: {
       create: jest.fn().mockImplementation(args => Promise.resolve({ id: 'job-1', ...args.data })),
     },
+    provider: {
+      findMany: jest.fn().mockResolvedValue([]),
+    },
   };
 
   const piiMock = {
     redact: jest.fn().mockImplementation((text: string) => text), // By default, no redaction
+  };
+
+  const notificationsMock = {
+    sendNotification: jest.fn().mockResolvedValue(undefined),
   };
 
   beforeEach(async () => {
@@ -24,12 +33,14 @@ describe('JobsService', () => {
         JobsService,
         { provide: PrismaService, useValue: prismaMock },
         { provide: PiiService, useValue: piiMock },
+        { provide: NotificationsService, useValue: notificationsMock },
       ],
     }).compile();
 
     service = module.get<JobsService>(JobsService);
     prisma = module.get<PrismaService>(PrismaService);
     pii = module.get<PiiService>(PiiService);
+    notifications = module.get<NotificationsService>(NotificationsService);
     jest.clearAllMocks();
   });
 

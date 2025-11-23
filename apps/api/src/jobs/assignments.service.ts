@@ -9,6 +9,7 @@ import {
 import { AssignmentReminderStatus, AssignmentPayoutStatus, ScheduleProposedBy } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/notification.types';
 import { ProposeScheduleDto, ConfirmScheduleDto, RejectAssignmentDto } from './dto/schedule.dto';
 
 export const ASSIGNMENT_STATUS = {
@@ -146,8 +147,10 @@ export class AssignmentsService {
       where: { id: assignmentId },
       select: {
         id: true,
+        jobId: true,
         status: true,
-        provider: { select: { userId: true } },
+        provider: { select: { userId: true, user: { select: { name: true } } } },
+        job: { select: { title: true, customerId: true } },
       },
     });
     if (!assignment) throw new NotFoundException('Assignment not found');
@@ -164,6 +167,22 @@ export class AssignmentsService {
       },
     });
     this.logger.log(`Assignment ${assignmentId} marked complete by provider ${providerUserId}`);
+
+    // Notify customer that job is completed
+    await this.notifications.sendNotification(
+      assignment.job.customerId,
+      NotificationType.JOB_COMPLETED,
+      'Job Completed',
+      `${assignment.provider.user.name} has marked "${assignment.job.title}" as completed`,
+      {
+        jobId: assignment.jobId,
+        assignmentId: assignment.id,
+        providerId: assignment.provider.userId,
+      }
+    ).catch(err => {
+      this.logger.error(`Failed to send JOB_COMPLETED notification:`, err);
+    });
+
     return updated;
   }
 
