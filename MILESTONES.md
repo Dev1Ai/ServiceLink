@@ -289,6 +289,27 @@
     - BiometricSettings, OfflineIndicator, SyncStatus, PhotoCapture, GPSCheckInOut
     - Integrated into profile screen and ready for job workflows
     - All CI checks passed, merged to main
+  - ✅ PR #65: Photo thumbnail generation (MERGED - 2025-11-23)
+    - Implemented automatic thumbnail generation on photo upload
+    - Sharp library integration for 200x200 thumbnail resize
+    - S3 storage with _thumb suffix naming convention
+    - Database thumbnailUrl persistence
+    - All 439 unit tests passing, CI passed
+  - ✅ PR #66: Check-in/check-out notifications (MERGED - 2025-11-23)
+    - Added PROVIDER_CHECKED_IN and PROVIDER_CHECKED_OUT notification types
+    - NotificationsService methods: notifyCheckIn(), notifyCheckOut()
+    - Integration with AssignmentsService GPS checkpoint flows
+    - Real-time customer notifications when providers arrive/leave job sites
+    - All 439 unit tests passing, CI passed
+  - ✅ PR #67: Notification history persistence and API (MERGED - 2025-11-23)
+    - Notification model with read/unread tracking
+    - Database persistence in sendNotification() flow
+    - NotificationsController with 4 JWT-protected endpoints
+    - REST API: GET /notifications, GET /notifications/unread-count, PATCH /notifications/:id/read, PATCH /notifications/read-all
+    - Proper indexing for efficient queries (userId, read, createdAt, composite)
+    - NestJS module dependency injection fixes (JwtModule, ConfigModule)
+    - All 439 unit tests passing, E2E tests passing, CI passed
   - 🎉 **M11 COMPLETE!** All 5 phases delivered. Milestones M3-M11 fully implemented.
+  - 🎉 **Post-M11 Enhancements!** 3 additional features merged: photo thumbnails, enhanced notifications, notification history API
 
 Last updated: 2025-11-23
