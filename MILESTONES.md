@@ -115,20 +115,18 @@
     - Comprehensive 500+ line implementation guide
     - Integration points across all services documented
 
-## 🚧 In Progress
-
-### M10 — Mobile Push Notifications (PR #58 - In Progress)
-- Implementation Complete:
+### M10 — Mobile Push Notifications ✅ (Completed - Nov 2025)
+- Completed subtasks (PR #58 - merged):
   - DeviceToken and Notification models in Prisma schema
-  - DeviceTokensController with register/unregister endpoints
+  - DeviceTokensController with register/unregister endpoints (POST /device-tokens/register, DELETE /device-tokens/unregister)
   - NotificationsService with Firebase Cloud Messaging integration
   - Event-driven notifications: JOB_CREATED, QUOTE_RECEIVED, QUOTE_ACCEPTED, JOB_SCHEDULED, JOB_COMPLETED
   - Integration into JobsService, QuotesService, AssignmentsService
-  - Type-safe NotificationType enum
+  - Type-safe NotificationType enum with 11 notification categories
   - Multi-device push notification support with delivery tracking
   - Automatic token invalidation for failed deliveries
-- Status: CI checks running
-- Known Issue: Notification database storage temporarily disabled (Prisma Client generation issue)
+  - JWT-based authentication for device token registration
+  - All unit tests passing with proper NotificationsService mocks
 
 ## 📌 Notes
 - AI: OpenAI GPT-4o and Whisper integration with PII redaction
@@ -208,10 +206,11 @@
     - All E2E tests now passing with stable, deterministic patterns
 
 - **Current Work (November 2025):**
-  - 🔄 PR #58: M10 Mobile Push Notifications (CI running)
+  - ✅ PR #58: M10 Mobile Push Notifications (MERGED - 2025-11-22)
     - Firebase Cloud Messaging integration complete
     - DeviceToken management endpoints live
     - Event-driven notifications across 5 key user journeys
-    - Awaiting CI completion for merge to main
+    - All CI checks passed, merged to main
+  - 🎉 **M10 COMPLETE!** All milestones M3-M10 delivered
 
-Last updated: 2025-11-22
+Last updated: 2025-11-23
