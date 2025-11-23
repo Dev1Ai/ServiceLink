@@ -18,6 +18,7 @@ import { I18nConfigModule } from './i18n/i18n.module';
 import { LoyaltyModule } from './loyalty/loyalty.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { DeviceTokensModule } from './device-tokens/device-tokens.module';
+import { PhotosModule } from './photos/photos.module';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { RoleAwareThrottlerGuard } from './common/guards/role-throttler.guard';
 import { ConfigService } from '@nestjs/config';
@@ -75,6 +76,7 @@ import { ConfigService } from '@nestjs/config';
     LoyaltyModule,
     NotificationsModule,
     DeviceTokensModule,
+    PhotosModule,
   ],
   providers: [
     {
