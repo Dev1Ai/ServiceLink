@@ -4,19 +4,19 @@ import { PhotoContextType } from '@prisma/client';
 export class GenerateUploadUrlDto {
   @IsNotEmpty()
   @IsString()
-  filename: string;
+  filename!: string;
 
   @IsNotEmpty()
   @IsString()
-  contentType: string;
+  contentType!: string;
 
   @IsNotEmpty()
   @IsEnum(PhotoContextType)
-  contextType: PhotoContextType;
+  contextType!: PhotoContextType;
 
   @IsNotEmpty()
   @IsString()
-  contextId: string;
+  contextId!: string;
 }
 
 export class ConfirmUploadDto {

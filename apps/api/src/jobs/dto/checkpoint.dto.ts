@@ -3,11 +3,11 @@ import { IsNotEmpty, IsNumber, IsOptional, IsString, IsDateString } from 'class-
 export class CreateCheckpointDto {
   @IsNotEmpty()
   @IsNumber()
-  latitude: number;
+  latitude!: number;
 
   @IsNotEmpty()
   @IsNumber()
-  longitude: number;
+  longitude!: number;
 
   @IsOptional()
   @IsNumber()
@@ -15,7 +15,7 @@ export class CreateCheckpointDto {
 
   @IsNotEmpty()
   @IsDateString()
-  timestamp: string;
+  timestamp!: string;
 
   @IsOptional()
   @IsString()
@@ -37,22 +37,22 @@ export class CheckOutDto extends CreateCheckpointDto {
 export class CreateLocationUpdateDto {
   @IsNotEmpty()
   @IsNumber()
-  latitude: number;
+  latitude!: number;
 
   @IsNotEmpty()
   @IsNumber()
-  longitude: number;
+  longitude!: number;
 
   @IsNotEmpty()
   @IsNumber()
-  accuracy: number;
+  accuracy!: number;
 
   @IsNotEmpty()
   @IsDateString()
-  timestamp: string;
+  timestamp!: string;
 }
 
 export class UpdateLocationSharingDto {
   @IsNotEmpty()
-  enabled: boolean;
+  enabled!: boolean;
 }
