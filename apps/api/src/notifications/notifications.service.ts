@@ -192,6 +192,102 @@ export class NotificationsService implements OnModuleInit {
     await Promise.all([customerPromise, providerPromise]);
   }
 
+  async notifyCheckIn(payload: { assignmentId: string }) {
+    this.logger.log('Provider checked in: assignment=' + payload.assignmentId);
+
+    // Get assignment with job and participants
+    const assignment = await this.prisma.assignment.findUnique({
+      where: { id: payload.assignmentId },
+      include: {
+        job: { include: { customer: true } },
+        provider: { include: { user: true } },
+        checkpoints: {
+          where: { type: 'CHECK_IN' },
+          orderBy: { timestamp: 'desc' },
+          take: 1,
+        },
+      },
+    });
+
+    if (!assignment) {
+      this.logger.warn(`Assignment ${payload.assignmentId} not found for PROVIDER_CHECKED_IN notification`);
+      return;
+    }
+
+    if (assignment.checkpoints.length === 0) {
+      this.logger.warn(`No check-in checkpoint found for assignment ${payload.assignmentId}`);
+      return;
+    }
+
+    const checkpoint = assignment.checkpoints[0];
+    const checkInTime = checkpoint.timestamp.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+
+    // Notify customer that provider has checked in
+    await this.sendNotification(
+      assignment.job.customerId,
+      NotificationType.PROVIDER_CHECKED_IN,
+      'Provider Arrived',
+      `${assignment.provider.user.name} has checked in at ${checkInTime} for "${assignment.job.title}"`,
+      {
+        jobId: assignment.jobId,
+        assignmentId: payload.assignmentId,
+        providerId: assignment.providerId,
+        providerName: assignment.provider.user.name,
+        timestamp: checkpoint.timestamp.toISOString(),
+      }
+    ).catch(err => {
+      this.logger.error(`Failed to send PROVIDER_CHECKED_IN notification:`, err);
+    });
+  }
+
+  async notifyCheckOut(payload: { assignmentId: string }) {
+    this.logger.log('Provider checked out: assignment=' + payload.assignmentId);
+
+    // Get assignment with job and participants
+    const assignment = await this.prisma.assignment.findUnique({
+      where: { id: payload.assignmentId },
+      include: {
+        job: { include: { customer: true } },
+        provider: { include: { user: true } },
+        checkpoints: {
+          where: { type: 'CHECK_OUT' },
+          orderBy: { timestamp: 'desc' },
+          take: 1,
+        },
+      },
+    });
+
+    if (!assignment) {
+      this.logger.warn(`Assignment ${payload.assignmentId} not found for PROVIDER_CHECKED_OUT notification`);
+      return;
+    }
+
+    if (assignment.checkpoints.length === 0) {
+      this.logger.warn(`No check-out checkpoint found for assignment ${payload.assignmentId}`);
+      return;
+    }
+
+    const checkpoint = assignment.checkpoints[0];
+    const checkOutTime = checkpoint.timestamp.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+
+    // Notify customer that provider has checked out
+    await this.sendNotification(
+      assignment.job.customerId,
+      NotificationType.PROVIDER_CHECKED_OUT,
+      'Provider Completed Visit',
+      `${assignment.provider.user.name} has checked out at ${checkOutTime} for "${assignment.job.title}"`,
+      {
+        jobId: assignment.jobId,
+        assignmentId: payload.assignmentId,
+        providerId: assignment.providerId,
+        providerName: assignment.provider.user.name,
+        timestamp: checkpoint.timestamp.toISOString(),
+      }
+    ).catch(err => {
+      this.logger.error(`Failed to send PROVIDER_CHECKED_OUT notification:`, err);
+    });
+  }
+
   async notifyAssignmentRejected(payload: { jobId: string; assignmentId: string; providerId: string; reason?: string }) {
     this.logger.warn('Assignment rejected: job=' + payload.jobId + ' provider=' + payload.providerId);
   }
