@@ -363,5 +363,344 @@ describe('AnalyticsService', () => {
         ratingDistribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
       });
     });
+
+    it('should filter by year period correctly', async () => {
+      const mockAssignments = [
+        {
+          id: 'a1',
+          status: 'customer_verified',
+          createdAt: new Date('2025-01-15'),
+          job: { title: 'Recent', quotes: [{ total: 10000, status: 'accepted' }] },
+        },
+      ];
+
+      mockPrismaService.assignment.findMany.mockResolvedValue(mockAssignments);
+      mockPrismaService.provider.findUnique.mockResolvedValue({ userId: 'user1' });
+      mockPrismaService.review.findMany.mockResolvedValue([]);
+
+      const result = await service.getProviderPerformanceMetrics('provider1', 'year');
+
+      expect(result.period).toBe('year');
+      expect(result.jobsByStatus.completed).toBe(1);
+    });
+
+    it('should handle "all" period with old data', async () => {
+      const mockAssignments = [
+        {
+          id: 'a1',
+          status: 'customer_verified',
+          createdAt: new Date('2020-01-01'),
+          job: { title: 'Old Job', quotes: [{ total: 5000, status: 'accepted' }] },
+        },
+      ];
+
+      mockPrismaService.assignment.findMany.mockResolvedValue(mockAssignments);
+      mockPrismaService.provider.findUnique.mockResolvedValue({ userId: 'user1' });
+      mockPrismaService.review.findMany.mockResolvedValue([]);
+
+      const result = await service.getProviderPerformanceMetrics('provider1', 'all');
+
+      expect(result.period).toBe('all');
+      expect(result.jobsByStatus.completed).toBe(1);
+    });
+
+    it('should handle schedule_proposed_customer status as active', async () => {
+      const mockAssignments = [
+        {
+          id: 'a1',
+          status: 'schedule_proposed_customer',
+          createdAt: new Date('2025-11-10'),
+          job: { title: 'Service', quotes: [{ total: 10000, status: 'accepted' }] },
+        },
+      ];
+
+      mockPrismaService.assignment.findMany.mockResolvedValue(mockAssignments);
+      mockPrismaService.provider.findUnique.mockResolvedValue({ userId: 'user1' });
+      mockPrismaService.review.findMany.mockResolvedValue([]);
+
+      const result = await service.getProviderPerformanceMetrics('provider1', 'month');
+
+      expect(result.jobsByStatus.active).toBe(1);
+      expect(result.jobsByStatus.pending).toBe(0);
+    });
+
+    it('should handle schedule_proposed_provider status as active', async () => {
+      const mockAssignments = [
+        {
+          id: 'a1',
+          status: 'schedule_proposed_provider',
+          createdAt: new Date('2025-11-10'),
+          job: { title: 'Service', quotes: [{ total: 10000, status: 'accepted' }] },
+        },
+      ];
+
+      mockPrismaService.assignment.findMany.mockResolvedValue(mockAssignments);
+      mockPrismaService.provider.findUnique.mockResolvedValue({ userId: 'user1' });
+      mockPrismaService.review.findMany.mockResolvedValue([]);
+
+      const result = await service.getProviderPerformanceMetrics('provider1', 'month');
+
+      expect(result.jobsByStatus.active).toBe(1);
+    });
+
+    it('should calculate revenue by month with data across multiple months', async () => {
+      const mockAssignments = [
+        {
+          id: 'a1',
+          status: 'customer_verified',
+          createdAt: new Date('2025-11-10'),
+          job: { title: 'Nov Job', quotes: [{ total: 10000, status: 'accepted' }] },
+        },
+        {
+          id: 'a2',
+          status: 'customer_verified',
+          createdAt: new Date('2025-10-15'),
+          job: { title: 'Oct Job', quotes: [{ total: 20000, status: 'accepted' }] },
+        },
+        {
+          id: 'a3',
+          status: 'customer_verified',
+          createdAt: new Date('2025-09-20'),
+          job: { title: 'Sep Job', quotes: [{ total: 15000, status: 'accepted' }] },
+        },
+      ];
+
+      mockPrismaService.assignment.findMany.mockResolvedValue(mockAssignments);
+      mockPrismaService.provider.findUnique.mockResolvedValue({ userId: 'user1' });
+      mockPrismaService.review.findMany.mockResolvedValue([]);
+
+      const result = await service.getProviderPerformanceMetrics('provider1', 'year');
+
+      expect(result.revenueByMonth).toHaveLength(6);
+      const novRevenue = result.revenueByMonth.find((m) => m.month.includes('Nov'));
+      const octRevenue = result.revenueByMonth.find((m) => m.month.includes('Oct'));
+      const sepRevenue = result.revenueByMonth.find((m) => m.month.includes('Sep'));
+
+      expect(novRevenue?.revenue).toBe(10000);
+      expect(octRevenue?.revenue).toBe(20000);
+      expect(sepRevenue?.revenue).toBe(15000);
+    });
+
+    it('should handle rating distribution with all 5-star reviews', async () => {
+      const mockReviews = [
+        { id: 'r1', stars: 5, rateeUserId: 'user1', createdAt: new Date('2025-11-11') },
+        { id: 'r2', stars: 5, rateeUserId: 'user1', createdAt: new Date('2025-11-12') },
+        { id: 'r3', stars: 5, rateeUserId: 'user1', createdAt: new Date('2025-11-13') },
+      ];
+
+      mockPrismaService.assignment.findMany.mockResolvedValue([]);
+      mockPrismaService.provider.findUnique.mockResolvedValue({ userId: 'user1' });
+      mockPrismaService.review.findMany.mockResolvedValue(mockReviews);
+
+      const result = await service.getProviderPerformanceMetrics('provider1', 'month');
+
+      expect(result.customerSatisfaction.averageRating).toBe(5);
+      expect(result.customerSatisfaction.ratingDistribution).toEqual({
+        1: 0,
+        2: 0,
+        3: 0,
+        4: 0,
+        5: 3,
+      });
+    });
+
+    it('should handle rating distribution with all low ratings', async () => {
+      const mockReviews = [
+        { id: 'r1', stars: 1, rateeUserId: 'user1', createdAt: new Date('2025-11-11') },
+        { id: 'r2', stars: 2, rateeUserId: 'user1', createdAt: new Date('2025-11-12') },
+        { id: 'r3', stars: 1, rateeUserId: 'user1', createdAt: new Date('2025-11-13') },
+      ];
+
+      mockPrismaService.assignment.findMany.mockResolvedValue([]);
+      mockPrismaService.provider.findUnique.mockResolvedValue({ userId: 'user1' });
+      mockPrismaService.review.findMany.mockResolvedValue(mockReviews);
+
+      const result = await service.getProviderPerformanceMetrics('provider1', 'month');
+
+      expect(result.customerSatisfaction.averageRating).toBeCloseTo(1.33, 2);
+      expect(result.customerSatisfaction.ratingDistribution).toEqual({
+        1: 2,
+        2: 1,
+        3: 0,
+        4: 0,
+        5: 0,
+      });
+    });
+
+    it('should handle jobs with missing quote data in revenue calculation', async () => {
+      const mockAssignments = [
+        {
+          id: 'a1',
+          status: 'customer_verified',
+          createdAt: new Date('2025-11-10'),
+          job: { title: 'Service A', quotes: [] }, // No quotes
+        },
+        {
+          id: 'a2',
+          status: 'customer_verified',
+          createdAt: new Date('2025-11-11'),
+          job: { title: 'Service B', quotes: [{ total: 10000, status: 'accepted' }] },
+        },
+      ];
+
+      mockPrismaService.assignment.findMany.mockResolvedValue(mockAssignments);
+      mockPrismaService.provider.findUnique.mockResolvedValue({ userId: 'user1' });
+      mockPrismaService.review.findMany.mockResolvedValue([]);
+
+      const result = await service.getProviderPerformanceMetrics('provider1', 'month');
+
+      expect(result.topServices[0].service).toBe('Service B');
+      expect(result.topServices[0].revenue).toBe(10000);
+      expect(result.topServices[1].service).toBe('Service A');
+      expect(result.topServices[1].revenue).toBe(0);
+    });
+
+    it('should aggregate duplicate services correctly', async () => {
+      const mockAssignments = [
+        {
+          id: 'a1',
+          status: 'customer_verified',
+          createdAt: new Date('2025-11-10'),
+          job: { title: 'Plumbing', quotes: [{ total: 10000, status: 'accepted' }] },
+        },
+        {
+          id: 'a2',
+          status: 'customer_verified',
+          createdAt: new Date('2025-11-11'),
+          job: { title: 'Plumbing', quotes: [{ total: 15000, status: 'accepted' }] },
+        },
+        {
+          id: 'a3',
+          status: 'customer_verified',
+          createdAt: new Date('2025-11-12'),
+          job: { title: 'Plumbing', quotes: [{ total: 20000, status: 'accepted' }] },
+        },
+      ];
+
+      mockPrismaService.assignment.findMany.mockResolvedValue(mockAssignments);
+      mockPrismaService.provider.findUnique.mockResolvedValue({ userId: 'user1' });
+      mockPrismaService.review.findMany.mockResolvedValue([]);
+
+      const result = await service.getProviderPerformanceMetrics('provider1', 'month');
+
+      expect(result.topServices).toHaveLength(1);
+      expect(result.topServices[0].service).toBe('Plumbing');
+      expect(result.topServices[0].count).toBe(3);
+      expect(result.topServices[0].revenue).toBe(45000);
+    });
+
+    it('should handle mixed completed and non-completed assignments in service aggregation', async () => {
+      const mockAssignments = [
+        {
+          id: 'a1',
+          status: 'customer_verified',
+          createdAt: new Date('2025-11-10'),
+          job: { title: 'Plumbing', quotes: [{ total: 10000, status: 'accepted' }] },
+        },
+        {
+          id: 'a2',
+          status: 'scheduled',
+          createdAt: new Date('2025-11-11'),
+          job: { title: 'Plumbing', quotes: [{ total: 15000, status: 'accepted' }] },
+        },
+      ];
+
+      mockPrismaService.assignment.findMany.mockResolvedValue(mockAssignments);
+      mockPrismaService.provider.findUnique.mockResolvedValue({ userId: 'user1' });
+      mockPrismaService.review.findMany.mockResolvedValue([]);
+
+      const result = await service.getProviderPerformanceMetrics('provider1', 'month');
+
+      expect(result.topServices[0].service).toBe('Plumbing');
+      expect(result.topServices[0].count).toBe(2);
+      expect(result.topServices[0].revenue).toBe(10000); // Only completed jobs count toward revenue
+    });
+  });
+
+  describe('getProviderAnalytics edge cases', () => {
+    it('should handle provider with null userId', async () => {
+      mockPrismaService.assignment.findMany.mockResolvedValue([]);
+      mockPrismaService.provider.findUnique.mockResolvedValue({ userId: null });
+      mockPrismaService.review.findMany.mockResolvedValue([]);
+      mockPrismaService.quote.findMany.mockResolvedValue([]);
+
+      const result = await service.getProviderAnalytics('provider1');
+
+      expect(result.reviewCount).toBe(0);
+      expect(result.averageRating).toBe(0);
+    });
+
+    it('should calculate acceptance rate with all accepted quotes', async () => {
+      const mockQuotes = [
+        { id: 'q1', status: 'accepted', providerId: 'provider1' },
+        { id: 'q2', status: 'accepted', providerId: 'provider1' },
+        { id: 'q3', status: 'accepted', providerId: 'provider1' },
+      ];
+
+      mockPrismaService.assignment.findMany.mockResolvedValue([]);
+      mockPrismaService.provider.findUnique.mockResolvedValue({ userId: 'user1' });
+      mockPrismaService.review.findMany.mockResolvedValue([]);
+      mockPrismaService.quote.findMany.mockResolvedValue(mockQuotes);
+
+      const result = await service.getProviderAnalytics('provider1');
+
+      expect(result.acceptanceRate).toBe(100);
+    });
+
+    it('should calculate acceptance rate with all rejected quotes', async () => {
+      const mockQuotes = [
+        { id: 'q1', status: 'rejected', providerId: 'provider1' },
+        { id: 'q2', status: 'rejected', providerId: 'provider1' },
+      ];
+
+      mockPrismaService.assignment.findMany.mockResolvedValue([]);
+      mockPrismaService.provider.findUnique.mockResolvedValue({ userId: 'user1' });
+      mockPrismaService.review.findMany.mockResolvedValue([]);
+      mockPrismaService.quote.findMany.mockResolvedValue(mockQuotes);
+
+      const result = await service.getProviderAnalytics('provider1');
+
+      expect(result.acceptanceRate).toBe(0);
+    });
+
+    it('should calculate completion rate with all completed jobs', async () => {
+      const mockAssignments = [
+        {
+          id: 'a1',
+          status: 'customer_verified',
+          job: { id: 'j1', title: 'Service', quotes: [{ total: 10000, status: 'accepted' }] },
+        },
+        {
+          id: 'a2',
+          status: 'customer_verified',
+          job: { id: 'j2', title: 'Service', quotes: [{ total: 15000, status: 'accepted' }] },
+        },
+      ];
+
+      mockPrismaService.assignment.findMany.mockResolvedValue(mockAssignments);
+      mockPrismaService.provider.findUnique.mockResolvedValue({ userId: 'user1' });
+      mockPrismaService.review.findMany.mockResolvedValue([]);
+      mockPrismaService.quote.findMany.mockResolvedValue([]);
+
+      const result = await service.getProviderAnalytics('provider1');
+
+      expect(result.completionRate).toBe(100);
+      expect(result.activeJobs).toBe(0);
+      expect(result.completedJobs).toBe(2);
+    });
+
+    it('should handle average rating with single review', async () => {
+      const mockReviews = [{ id: 'r1', stars: 4, rateeUserId: 'user1' }];
+
+      mockPrismaService.assignment.findMany.mockResolvedValue([]);
+      mockPrismaService.provider.findUnique.mockResolvedValue({ userId: 'user1' });
+      mockPrismaService.review.findMany.mockResolvedValue(mockReviews);
+      mockPrismaService.quote.findMany.mockResolvedValue([]);
+
+      const result = await service.getProviderAnalytics('provider1');
+
+      expect(result.averageRating).toBe(4);
+      expect(result.reviewCount).toBe(1);
+    });
   });
 });
