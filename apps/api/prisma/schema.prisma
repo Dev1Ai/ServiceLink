@@ -334,6 +334,7 @@ model Notification {
   @@index([userId, read])
 }
 
+
 // M11 Phase 2: GPS Features
 enum CheckpointType {
   CHECK_IN
