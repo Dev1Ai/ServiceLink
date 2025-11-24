@@ -309,7 +309,14 @@
     - Proper indexing for efficient queries (userId, read, createdAt, composite)
     - NestJS module dependency injection fixes (JwtModule, ConfigModule)
     - All 439 unit tests passing, E2E tests passing, CI passed
+  - ✅ PR #80: PhotosService unit tests (MERGED - 2025-11-24)
+    - 25 comprehensive unit tests for PhotosService (M11 Phase 3)
+    - Test coverage: generateUploadUrl (8 tests), confirmUpload (5 tests), getPhotos (4 tests), deletePhoto (5 tests), Integration (2 tests)
+    - AWS SDK mocking (S3Client, commands, presigned URLs)
+    - Sharp library mocking for thumbnail generation
+    - All 751 unit tests passing across 46 test suites
+    - 100% service coverage: All controllers and services have comprehensive test files
   - 🎉 **M11 COMPLETE!** All 5 phases delivered. Milestones M3-M11 fully implemented.
-  - 🎉 **Post-M11 Enhancements!** 3 additional features merged: photo thumbnails, enhanced notifications, notification history API
+  - 🎉 **Post-M11 Enhancements!** 4 additional features merged: photo thumbnails, enhanced notifications, notification history API, PhotosService tests
 
-Last updated: 2025-11-23
+Last updated: 2025-11-24
