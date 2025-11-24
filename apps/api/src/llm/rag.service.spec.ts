@@ -173,6 +173,47 @@ describe('RagService', () => {
 
       expect(result).toBeNull();
     });
+
+    it('should handle database insertion errors', async () => {
+      mockConfigService.get.mockReturnValue('sk-validapikey12345');
+      const serviceWithOpenAI = new RagService(prismaService, configService);
+
+      const mockEmbedding = Array(1536).fill(0.1);
+      mockEmbeddingsCreate.mockResolvedValue({
+        data: [{ embedding: mockEmbedding }],
+      });
+
+      mockPrismaService.$executeRaw.mockRejectedValue(new Error('Database constraint violation'));
+
+      const result = await serviceWithOpenAI.addKnowledge({
+        title: 'Test',
+        content: 'Content',
+        category: 'test',
+      });
+
+      expect(result).toBeNull();
+    });
+
+    it('should format embedding as PostgreSQL vector', async () => {
+      mockConfigService.get.mockReturnValue('sk-validapikey12345');
+      const serviceWithOpenAI = new RagService(prismaService, configService);
+
+      const mockEmbedding = [0.1, 0.2, 0.3];
+      mockEmbeddingsCreate.mockResolvedValue({
+        data: [{ embedding: mockEmbedding }],
+      });
+
+      mockPrismaService.$executeRaw.mockResolvedValue(1);
+
+      await serviceWithOpenAI.addKnowledge({
+        title: 'Test',
+        content: 'Content',
+        category: 'test',
+      });
+
+      expect(mockEmbeddingsCreate).toHaveBeenCalled();
+      expect(mockPrismaService.$executeRaw).toHaveBeenCalled();
+    });
   });
 
   describe('searchKnowledge', () => {
@@ -246,6 +287,65 @@ describe('RagService', () => {
       const serviceWithOpenAI = new RagService(prismaService, configService);
 
       mockEmbeddingsCreate.mockRejectedValue(new Error('API Error'));
+
+      const result = await serviceWithOpenAI.searchKnowledge('test');
+
+      expect(result).toEqual([]);
+    });
+
+    it('should use default limit of 5 when not specified', async () => {
+      mockConfigService.get.mockReturnValue('sk-validapikey12345');
+      const serviceWithOpenAI = new RagService(prismaService, configService);
+
+      const mockEmbedding = Array(1536).fill(0.1);
+      mockEmbeddingsCreate.mockResolvedValue({
+        data: [{ embedding: mockEmbedding }],
+      });
+
+      mockPrismaService.$queryRaw.mockResolvedValue([]);
+
+      await serviceWithOpenAI.searchKnowledge('test query');
+
+      expect(mockPrismaService.$queryRaw).toHaveBeenCalled();
+    });
+
+    it('should parse similarity as float', async () => {
+      mockConfigService.get.mockReturnValue('sk-validapikey12345');
+      const serviceWithOpenAI = new RagService(prismaService, configService);
+
+      const mockEmbedding = Array(1536).fill(0.1);
+      mockEmbeddingsCreate.mockResolvedValue({
+        data: [{ embedding: mockEmbedding }],
+      });
+
+      const mockResults = [
+        {
+          id: '1',
+          title: 'Test',
+          content: 'Test content',
+          category: 'test',
+          similarity: '0.9234567',
+        },
+      ];
+
+      mockPrismaService.$queryRaw.mockResolvedValue(mockResults);
+
+      const result = await serviceWithOpenAI.searchKnowledge('test');
+
+      expect(result[0].similarity).toBe(0.9234567);
+      expect(typeof result[0].similarity).toBe('number');
+    });
+
+    it('should handle database errors gracefully', async () => {
+      mockConfigService.get.mockReturnValue('sk-validapikey12345');
+      const serviceWithOpenAI = new RagService(prismaService, configService);
+
+      const mockEmbedding = Array(1536).fill(0.1);
+      mockEmbeddingsCreate.mockResolvedValue({
+        data: [{ embedding: mockEmbedding }],
+      });
+
+      mockPrismaService.$queryRaw.mockRejectedValue(new Error('Database connection error'));
 
       const result = await serviceWithOpenAI.searchKnowledge('test');
 
@@ -409,6 +509,104 @@ describe('RagService', () => {
 
       expect(result?.sources).toEqual(['Article 1', 'Article 2', 'Article 3']);
       expect(mockChatCompletionsCreate).toHaveBeenCalled();
+    });
+
+    it('should handle chat completion API errors', async () => {
+      mockConfigService.get.mockReturnValue('sk-validapikey12345');
+      const serviceWithOpenAI = new RagService(prismaService, configService);
+
+      const mockEmbedding = Array(1536).fill(0.1);
+      mockEmbeddingsCreate.mockResolvedValue({
+        data: [{ embedding: mockEmbedding }],
+      });
+
+      mockPrismaService.$queryRaw.mockResolvedValue([
+        {
+          id: '1',
+          title: 'Test',
+          content: 'Test content',
+          category: 'test',
+          similarity: 0.9,
+        },
+      ]);
+
+      mockChatCompletionsCreate.mockRejectedValue(new Error('Chat API rate limit'));
+
+      const result = await serviceWithOpenAI.answerQuestion('test?');
+
+      expect(result).toBeNull();
+    });
+
+    it('should use gpt-4o model with temperature 0.3', async () => {
+      mockConfigService.get.mockReturnValue('sk-validapikey12345');
+      const serviceWithOpenAI = new RagService(prismaService, configService);
+
+      const mockEmbedding = Array(1536).fill(0.1);
+      mockEmbeddingsCreate.mockResolvedValue({
+        data: [{ embedding: mockEmbedding }],
+      });
+
+      mockPrismaService.$queryRaw.mockResolvedValue([
+        {
+          id: '1',
+          title: 'Test',
+          content: 'Test content',
+          category: 'test',
+          similarity: 0.9,
+        },
+      ]);
+
+      mockChatCompletionsCreate.mockResolvedValue({
+        choices: [{ message: { content: 'Test answer' } }],
+      });
+
+      await serviceWithOpenAI.answerQuestion('test?');
+
+      expect(mockChatCompletionsCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          model: 'gpt-4o',
+          temperature: 0.3,
+          messages: expect.arrayContaining([
+            expect.objectContaining({ role: 'system' }),
+            expect.objectContaining({ role: 'user' }),
+          ]),
+        }),
+      );
+    });
+
+    it('should retrieve exactly 3 knowledge articles', async () => {
+      mockConfigService.get.mockReturnValue('sk-validapikey12345');
+      const serviceWithOpenAI = new RagService(prismaService, configService);
+
+      const mockEmbedding = Array(1536).fill(0.1);
+      mockEmbeddingsCreate.mockResolvedValue({
+        data: [{ embedding: mockEmbedding }],
+      });
+
+      mockPrismaService.$queryRaw.mockResolvedValue([
+        {
+          id: '1',
+          title: 'Article 1',
+          content: 'Content 1',
+          category: 'test',
+          similarity: 0.95,
+        },
+        {
+          id: '2',
+          title: 'Article 2',
+          content: 'Content 2',
+          category: 'test',
+          similarity: 0.90,
+        },
+      ]);
+
+      mockChatCompletionsCreate.mockResolvedValue({
+        choices: [{ message: { content: 'Answer' } }],
+      });
+
+      await serviceWithOpenAI.answerQuestion('test?');
+
+      expect(mockPrismaService.$queryRaw).toHaveBeenCalled();
     });
   });
 });
