@@ -271,6 +271,48 @@ describe('LoyaltyService', () => {
       });
     });
 
+    it('should return silver tier rewards', async () => {
+      const mockAccount = {
+        id: 'account1',
+        userId: 'user1',
+        points: 2000,
+        tier: 'SILVER',
+        lifetimePoints: 2000,
+        lifetimeSpent: 20000,
+        transactions: [],
+        rewards: [],
+      };
+
+      mockPrismaService.loyaltyAccount.findUnique.mockResolvedValue(mockAccount);
+
+      const result = await service.getAvailableRewards('user1');
+
+      expect(result.tier).toBe('SILVER');
+      expect(result.points).toBe(2000);
+      expect(result.availableRewards).toHaveLength(3);
+    });
+
+    it('should return gold tier rewards', async () => {
+      const mockAccount = {
+        id: 'account1',
+        userId: 'user1',
+        points: 7000,
+        tier: 'GOLD',
+        lifetimePoints: 7000,
+        lifetimeSpent: 70000,
+        transactions: [],
+        rewards: [],
+      };
+
+      mockPrismaService.loyaltyAccount.findUnique.mockResolvedValue(mockAccount);
+
+      const result = await service.getAvailableRewards('user1');
+
+      expect(result.tier).toBe('GOLD');
+      expect(result.points).toBe(7000);
+      expect(result.availableRewards).toHaveLength(3);
+    });
+
     it('should return platinum tier rewards', async () => {
       const mockAccount = {
         id: 'account1',
@@ -290,6 +332,430 @@ describe('LoyaltyService', () => {
       expect(result.tier).toBe('PLATINUM');
       expect(result.availableRewards).toHaveLength(4); // Platinum has most rewards
       expect(result.availableRewards.some((r) => r.type === 'FREE_SERVICE')).toBe(true);
+    });
+  });
+
+  describe('applyReward', () => {
+    it('should apply valid reward successfully', async () => {
+      const mockAccount = {
+        id: 'account1',
+        userId: 'user1',
+        points: 500,
+        tier: 'BRONZE',
+        lifetimePoints: 500,
+        lifetimeSpent: 5000,
+        transactions: [],
+        rewards: [],
+      };
+
+      const mockReward = {
+        id: 'reward1',
+        accountId: 'account1',
+        code: 'ABC12345',
+        type: 'DISCOUNT_PERCENT',
+        value: 10,
+        description: '10% off',
+        expiresAt: new Date(Date.now() + 86400000), // Tomorrow
+        redeemedAt: null,
+      };
+
+      mockPrismaService.loyaltyAccount.findUnique.mockResolvedValue(mockAccount);
+      mockPrismaService.loyaltyReward.findFirst.mockResolvedValue(mockReward);
+      mockPrismaService.loyaltyReward.update.mockResolvedValue({ ...mockReward, redeemedAt: new Date() });
+
+      const result = await service.applyReward('user1', 'ABC12345', 'job1');
+
+      expect(result).toEqual(mockReward);
+      expect(mockPrismaService.loyaltyReward.update).toHaveBeenCalledWith({
+        where: { id: 'reward1' },
+        data: {
+          redeemedAt: expect.any(Date),
+          jobId: 'job1',
+        },
+      });
+    });
+
+    it('should throw error if reward not found', async () => {
+      const mockAccount = {
+        id: 'account1',
+        userId: 'user1',
+        points: 500,
+        tier: 'BRONZE',
+        lifetimePoints: 500,
+        lifetimeSpent: 5000,
+        transactions: [],
+        rewards: [],
+      };
+
+      mockPrismaService.loyaltyAccount.findUnique.mockResolvedValue(mockAccount);
+      mockPrismaService.loyaltyReward.findFirst.mockResolvedValue(null);
+
+      await expect(service.applyReward('user1', 'INVALID', 'job1')).rejects.toThrow(
+        'Reward not found or already redeemed',
+      );
+    });
+
+    it('should apply reward without expiration date', async () => {
+      const mockAccount = {
+        id: 'account1',
+        userId: 'user1',
+        points: 500,
+        tier: 'BRONZE',
+        lifetimePoints: 500,
+        lifetimeSpent: 5000,
+        transactions: [],
+        rewards: [],
+      };
+
+      const mockReward = {
+        id: 'reward1',
+        accountId: 'account1',
+        code: 'ABC12345',
+        type: 'DISCOUNT_FIXED',
+        value: 2500,
+        description: '$25 off',
+        expiresAt: null, // No expiration
+        redeemedAt: null,
+      };
+
+      mockPrismaService.loyaltyAccount.findUnique.mockResolvedValue(mockAccount);
+      mockPrismaService.loyaltyReward.findFirst.mockResolvedValue(mockReward);
+      mockPrismaService.loyaltyReward.update.mockResolvedValue({ ...mockReward, redeemedAt: new Date() });
+
+      const result = await service.applyReward('user1', 'ABC12345', 'job1');
+
+      expect(result).toEqual(mockReward);
+    });
+  });
+
+  describe('getAccountSummary', () => {
+    it('should return complete account summary', async () => {
+      const mockAccount = {
+        id: 'account1',
+        userId: 'user1',
+        points: 1500,
+        tier: 'SILVER',
+        lifetimePoints: 2000,
+        lifetimeSpent: 20000,
+        transactions: [{ id: 'tx1', points: 100 }],
+        rewards: [{ id: 'reward1', type: 'DISCOUNT_PERCENT' }],
+      };
+
+      mockPrismaService.loyaltyAccount.findUnique.mockResolvedValue(mockAccount);
+
+      const result = await service.getAccountSummary('user1');
+
+      expect(result).toMatchObject({
+        userId: 'user1',
+        points: 1500,
+        tier: 'SILVER',
+        lifetimePoints: 2000,
+        lifetimeSpent: 20000,
+        pointsToNextTier: 3000, // 5000 - 2000 for gold
+        tierBonus: 1.10, // Silver 10% bonus
+        recentTransactions: mockAccount.transactions,
+        activeRewards: mockAccount.rewards,
+      });
+    });
+
+    it('should return null pointsToNextTier for platinum tier', async () => {
+      const mockAccount = {
+        id: 'account1',
+        userId: 'user1',
+        points: 15000,
+        tier: 'PLATINUM',
+        lifetimePoints: 15000,
+        lifetimeSpent: 150000,
+        transactions: [],
+        rewards: [],
+      };
+
+      mockPrismaService.loyaltyAccount.findUnique.mockResolvedValue(mockAccount);
+
+      const result = await service.getAccountSummary('user1');
+
+      expect(result.pointsToNextTier).toBeNull(); // Already at max tier
+      expect(result.tierBonus).toBe(1.30); // Platinum 30% bonus
+    });
+
+    it('should calculate pointsToNextTier correctly for bronze', async () => {
+      const mockAccount = {
+        id: 'account1',
+        userId: 'user1',
+        points: 750,
+        tier: 'BRONZE',
+        lifetimePoints: 750,
+        lifetimeSpent: 7500,
+        transactions: [],
+        rewards: [],
+      };
+
+      mockPrismaService.loyaltyAccount.findUnique.mockResolvedValue(mockAccount);
+
+      const result = await service.getAccountSummary('user1');
+
+      expect(result.pointsToNextTier).toBe(250); // 1000 - 750 for silver
+    });
+  });
+
+  describe('tier calculations', () => {
+    it('should award gold tier bonus correctly', async () => {
+      const mockAccount = {
+        id: 'account1',
+        userId: 'user1',
+        points: 6000,
+        tier: 'GOLD',
+        lifetimePoints: 6000,
+        lifetimeSpent: 60000,
+        transactions: [],
+        rewards: [],
+      };
+
+      mockPrismaService.loyaltyAccount.findUnique.mockResolvedValue(mockAccount);
+      mockPrismaService.loyaltyTransaction.create.mockResolvedValue({});
+      mockPrismaService.loyaltyAccount.update.mockResolvedValue({});
+
+      // Award points for $100 job with 20% gold bonus
+      const points = await service.awardPointsForJob('user1', 'job1', 10000);
+
+      expect(points).toBe(120); // 100 * 1.20 = 120
+    });
+
+    it('should award platinum tier bonus correctly', async () => {
+      const mockAccount = {
+        id: 'account1',
+        userId: 'user1',
+        points: 12000,
+        tier: 'PLATINUM',
+        lifetimePoints: 12000,
+        lifetimeSpent: 120000,
+        transactions: [],
+        rewards: [],
+      };
+
+      mockPrismaService.loyaltyAccount.findUnique.mockResolvedValue(mockAccount);
+      mockPrismaService.loyaltyTransaction.create.mockResolvedValue({});
+      mockPrismaService.loyaltyAccount.update.mockResolvedValue({});
+
+      // Award points for $100 job with 30% platinum bonus
+      const points = await service.awardPointsForJob('user1', 'job1', 10000);
+
+      expect(points).toBe(130); // 100 * 1.30 = 130
+    });
+
+    it('should upgrade from bronze to silver at 1000 points', async () => {
+      const mockAccount = {
+        id: 'account1',
+        userId: 'user1',
+        points: 999,
+        tier: 'BRONZE',
+        lifetimePoints: 999,
+        lifetimeSpent: 9990,
+        transactions: [],
+        rewards: [],
+      };
+
+      mockPrismaService.loyaltyAccount.findUnique.mockResolvedValue(mockAccount);
+      mockPrismaService.loyaltyTransaction.create.mockResolvedValue({});
+      mockPrismaService.loyaltyAccount.update.mockResolvedValue({});
+
+      await service.awardPointsForJob('user1', 'job1', 100); // 1 point
+
+      expect(mockPrismaService.loyaltyAccount.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            tier: 'SILVER',
+          }),
+        }),
+      );
+    });
+
+    it('should upgrade from silver to gold at 5000 points', async () => {
+      const mockAccount = {
+        id: 'account1',
+        userId: 'user1',
+        points: 4900,
+        tier: 'SILVER',
+        lifetimePoints: 4900,
+        lifetimeSpent: 49000,
+        transactions: [],
+        rewards: [],
+      };
+
+      mockPrismaService.loyaltyAccount.findUnique.mockResolvedValue(mockAccount);
+      mockPrismaService.loyaltyTransaction.create.mockResolvedValue({});
+      mockPrismaService.loyaltyAccount.update.mockResolvedValue({});
+
+      await service.awardPointsForJob('user1', 'job1', 10000); // 100 * 1.10 = 110 points
+
+      expect(mockPrismaService.loyaltyAccount.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            tier: 'GOLD',
+          }),
+        }),
+      );
+    });
+
+    it('should upgrade from gold to platinum at 10000 points', async () => {
+      const mockAccount = {
+        id: 'account1',
+        userId: 'user1',
+        points: 9900,
+        tier: 'GOLD',
+        lifetimePoints: 9900,
+        lifetimeSpent: 99000,
+        transactions: [],
+        rewards: [],
+      };
+
+      mockPrismaService.loyaltyAccount.findUnique.mockResolvedValue(mockAccount);
+      mockPrismaService.loyaltyTransaction.create.mockResolvedValue({});
+      mockPrismaService.loyaltyAccount.update.mockResolvedValue({});
+
+      await service.awardPointsForJob('user1', 'job1', 10000); // 100 * 1.20 = 120 points
+
+      expect(mockPrismaService.loyaltyAccount.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            tier: 'PLATINUM',
+          }),
+        }),
+      );
+    });
+  });
+
+  describe('reward redemption edge cases', () => {
+    it('should create loyalty transaction when redeeming reward', async () => {
+      const mockAccount = {
+        id: 'account1',
+        userId: 'user1',
+        points: 1000,
+        tier: 'SILVER',
+        lifetimePoints: 1000,
+        lifetimeSpent: 10000,
+        transactions: [],
+        rewards: [],
+      };
+
+      mockPrismaService.loyaltyAccount.findUnique.mockResolvedValue(mockAccount);
+      mockPrismaService.loyaltyTransaction.create.mockResolvedValue({});
+      mockPrismaService.loyaltyReward.create.mockResolvedValue({ id: 'reward1' });
+      mockPrismaService.loyaltyAccount.update.mockResolvedValue({});
+
+      await service.redeemReward('user1', 'DISCOUNT_FIXED', 500, 2500, '$25 off');
+
+      expect(mockPrismaService.loyaltyTransaction.create).toHaveBeenCalledWith({
+        data: {
+          accountId: 'account1',
+          points: -500,
+          type: 'REDEEM',
+          description: 'Redeemed 500 points for $25 off',
+        },
+      });
+    });
+
+    it('should set reward expiration to 90 days', async () => {
+      const mockAccount = {
+        id: 'account1',
+        userId: 'user1',
+        points: 1000,
+        tier: 'SILVER',
+        lifetimePoints: 1000,
+        lifetimeSpent: 10000,
+        transactions: [],
+        rewards: [],
+      };
+
+      mockPrismaService.loyaltyAccount.findUnique.mockResolvedValue(mockAccount);
+      mockPrismaService.loyaltyTransaction.create.mockResolvedValue({});
+      mockPrismaService.loyaltyReward.create.mockResolvedValue({ id: 'reward1' });
+      mockPrismaService.loyaltyAccount.update.mockResolvedValue({});
+
+      await service.redeemReward('user1', 'DISCOUNT_PERCENT', 500, 10, '10% off');
+
+      expect(mockPrismaService.loyaltyReward.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          expiresAt: expect.any(Date),
+        }),
+      });
+
+      const createCall = mockPrismaService.loyaltyReward.create.mock.calls[0][0];
+      const expiresAt = createCall.data.expiresAt as Date;
+      const expectedExpiration = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000);
+      const diffMs = Math.abs(expiresAt.getTime() - expectedExpiration.getTime());
+      expect(diffMs).toBeLessThan(1000); // Within 1 second
+    });
+
+    it('should generate unique reward code', async () => {
+      const mockAccount = {
+        id: 'account1',
+        userId: 'user1',
+        points: 1000,
+        tier: 'SILVER',
+        lifetimePoints: 1000,
+        lifetimeSpent: 10000,
+        transactions: [],
+        rewards: [],
+      };
+
+      mockPrismaService.loyaltyAccount.findUnique.mockResolvedValue(mockAccount);
+      mockPrismaService.loyaltyTransaction.create.mockResolvedValue({});
+      mockPrismaService.loyaltyReward.create.mockResolvedValue({ id: 'reward1', code: 'ABC12345' });
+      mockPrismaService.loyaltyAccount.update.mockResolvedValue({});
+
+      await service.redeemReward('user1', 'DISCOUNT_PERCENT', 500, 10, '10% off');
+
+      expect(mockPrismaService.loyaltyReward.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          code: expect.stringMatching(/^[A-Z0-9]{8}$/),
+        }),
+      });
+    });
+  });
+
+  describe('points calculation edge cases', () => {
+    it('should handle fractional dollar amounts correctly', async () => {
+      const mockAccount = {
+        id: 'account1',
+        userId: 'user1',
+        points: 100,
+        tier: 'BRONZE',
+        lifetimePoints: 100,
+        lifetimeSpent: 1000,
+        transactions: [],
+        rewards: [],
+      };
+
+      mockPrismaService.loyaltyAccount.findUnique.mockResolvedValue(mockAccount);
+      mockPrismaService.loyaltyTransaction.create.mockResolvedValue({});
+      mockPrismaService.loyaltyAccount.update.mockResolvedValue({});
+
+      // $50.99 should give 50 points (floor)
+      const points = await service.awardPointsForJob('user1', 'job1', 5099);
+
+      expect(points).toBe(50); // Floor of 50.99
+    });
+
+    it('should handle zero amount job', async () => {
+      const mockAccount = {
+        id: 'account1',
+        userId: 'user1',
+        points: 100,
+        tier: 'BRONZE',
+        lifetimePoints: 100,
+        lifetimeSpent: 1000,
+        transactions: [],
+        rewards: [],
+      };
+
+      mockPrismaService.loyaltyAccount.findUnique.mockResolvedValue(mockAccount);
+      mockPrismaService.loyaltyTransaction.create.mockResolvedValue({});
+      mockPrismaService.loyaltyAccount.update.mockResolvedValue({});
+
+      const points = await service.awardPointsForJob('user1', 'job1', 0);
+
+      expect(points).toBe(0);
     });
   });
 });

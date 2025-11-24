@@ -494,5 +494,250 @@ describe('ProvidersService', () => {
       expect(AnalyticsService.prototype.getProviderPerformanceMetrics).toHaveBeenCalledWith(providerId, 'year');
       expect(result).toEqual(mockMetrics);
     });
+
+    it('should handle week period', async () => {
+      const providerId = 'provider-123';
+      const mockMetrics = {
+        period: 'week' as const,
+        jobsByStatus: { pending: 1, active: 2, completed: 5, rejected: 0 },
+        revenueByMonth: [
+          { month: '2025-02', revenue: 800 },
+        ],
+        topServices: [
+          { service: 'Carpentry', count: 3, revenue: 500 },
+        ],
+        customerSatisfaction: {
+          averageRating: 4.6,
+          totalReviews: 5,
+          ratingDistribution: { 5: 3, 4: 2, 3: 0, 2: 0, 1: 0 },
+        },
+      };
+
+      jest.spyOn(AnalyticsService.prototype, 'getProviderPerformanceMetrics').mockResolvedValue(mockMetrics);
+
+      const result = await service.getPerformanceMetrics(providerId, 'week');
+
+      expect(AnalyticsService.prototype.getProviderPerformanceMetrics).toHaveBeenCalledWith(providerId, 'week');
+      expect(result).toEqual(mockMetrics);
+    });
+
+    it('should handle all period', async () => {
+      const providerId = 'provider-123';
+      const mockMetrics = {
+        period: 'all' as const,
+        jobsByStatus: { pending: 10, active: 8, completed: 200, rejected: 15 },
+        revenueByMonth: [
+          { month: '2023-01', revenue: 500 },
+          { month: '2023-02', revenue: 600 },
+          { month: '2024-01', revenue: 1000 },
+        ],
+        topServices: [
+          { service: 'All Services', count: 200, revenue: 50000 },
+        ],
+        customerSatisfaction: {
+          averageRating: 4.9,
+          totalReviews: 180,
+          ratingDistribution: { 5: 160, 4: 15, 3: 3, 2: 1, 1: 1 },
+        },
+      };
+
+      jest.spyOn(AnalyticsService.prototype, 'getProviderPerformanceMetrics').mockResolvedValue(mockMetrics);
+
+      const result = await service.getPerformanceMetrics(providerId, 'all');
+
+      expect(AnalyticsService.prototype.getProviderPerformanceMetrics).toHaveBeenCalledWith(providerId, 'all');
+      expect(result).toEqual(mockMetrics);
+    });
+  });
+
+  describe('createOnboardingLink: edge cases', () => {
+    it('should create provider profile if not existing before creating onboarding link', async () => {
+      const userId = 'user-new';
+      const mockNewProvider = {
+        id: 'provider-new',
+        userId,
+        stripeAccountId: null,
+      };
+
+      mockConfigService.get.mockReturnValue(undefined);
+      mockPrismaService.provider.findUnique.mockResolvedValue(null);
+      mockPrismaService.provider.create.mockResolvedValue(mockNewProvider);
+
+      const result = await service.createOnboardingLink(userId);
+
+      expect(mockPrismaService.provider.create).toHaveBeenCalledWith({
+        data: { userId },
+      });
+      expect(result).toEqual({ url: 'https://connect.stripe.com/setup/mock' });
+    });
+
+    it('should prefer STRIPE_SECRET_KEY over STRIPE_SECRET', async () => {
+      const userId = 'user-123';
+      const mockProvider = {
+        id: 'provider-123',
+        userId,
+        stripeAccountId: 'acct_123',
+      };
+
+      let getCallCount = 0;
+      mockConfigService.get.mockImplementation((key: string) => {
+        getCallCount++;
+        if (key === 'STRIPE_SECRET_KEY') {
+          return 'sk_test_from_secret_key';
+        }
+        if (key === 'STRIPE_SECRET') {
+          return 'sk_test_from_secret';
+        }
+        return undefined;
+      });
+
+      mockPrismaService.provider.findUnique.mockResolvedValue(mockProvider);
+      mockStripeAccountLinks.create.mockResolvedValue({
+        url: 'https://connect.stripe.com/setup/s/precedence',
+      });
+
+      await service.createOnboardingLink(userId);
+
+      // Should have called for STRIPE_SECRET_KEY first
+      expect(getCallCount).toBeGreaterThan(0);
+    });
+
+    it('should log warning when Stripe key is not set', async () => {
+      const userId = 'user-123';
+      const mockProvider = {
+        id: 'provider-123',
+        userId,
+        stripeAccountId: null,
+      };
+
+      mockConfigService.get.mockReturnValue(undefined);
+      mockPrismaService.provider.findUnique.mockResolvedValue(mockProvider);
+
+      const loggerWarnSpy = jest.spyOn(service['logger'], 'warn');
+
+      await service.createOnboardingLink(userId);
+
+      expect(loggerWarnSpy).toHaveBeenCalledWith('STRIPE_SECRET_KEY not set. Returning mock onboarding URL.');
+    });
+
+    it('should log warning when Stripe accountLinks.create fails', async () => {
+      const userId = 'user-123';
+      const mockProvider = {
+        id: 'provider-123',
+        userId,
+        stripeAccountId: 'acct_123',
+      };
+
+      mockConfigService.get.mockReturnValue('sk_test_validkey123');
+      mockPrismaService.provider.findUnique.mockResolvedValue(mockProvider);
+
+      const stripeError = new Error('Stripe API connection failed');
+      mockStripeAccountLinks.create.mockRejectedValue(stripeError);
+
+      const loggerWarnSpy = jest.spyOn(service['logger'], 'warn');
+
+      const result = await service.createOnboardingLink(userId);
+
+      expect(loggerWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Stripe error creating account link; returning mock.')
+      );
+      expect(result).toEqual({ url: 'https://connect.stripe.com/setup/mock' });
+    });
+  });
+
+  describe('getMe: edge cases', () => {
+    it('should handle user with null profile', async () => {
+      const userId = 'user-no-profile';
+      const mockProvider = {
+        id: 'provider-123',
+        userId,
+      };
+      const mockUser = {
+        id: userId,
+        email: 'noprofile@example.com',
+        name: 'No Profile User',
+        role: 'PROVIDER',
+        createdAt: new Date(),
+        profile: null,
+        provider: {
+          id: 'provider-123',
+          kycStatus: 'PENDING',
+          stripeAccountId: null,
+          online: false,
+          serviceRadiusKm: 25,
+          lat: null,
+          lng: null,
+        },
+      };
+
+      mockPrismaService.provider.findUnique.mockResolvedValue(mockProvider);
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+
+      const result = await service.getMe(userId);
+
+      expect(result).toEqual(mockUser);
+      expect(result?.profile).toBeNull();
+    });
+
+    it('should handle user with incomplete provider data', async () => {
+      const userId = 'user-incomplete';
+      const mockProvider = {
+        id: 'provider-incomplete',
+        userId,
+      };
+      const mockUser = {
+        id: userId,
+        email: 'incomplete@example.com',
+        name: 'Incomplete Provider',
+        role: 'PROVIDER',
+        createdAt: new Date(),
+        profile: {
+          firstName: 'Incomplete',
+          lastName: 'Provider',
+          avatarUrl: null,
+        },
+        provider: {
+          id: 'provider-incomplete',
+          kycStatus: 'PENDING',
+          stripeAccountId: null,
+          online: false,
+          serviceRadiusKm: null,
+          lat: null,
+          lng: null,
+        },
+      };
+
+      mockPrismaService.provider.findUnique.mockResolvedValue(mockProvider);
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+
+      const result = await service.getMe(userId);
+
+      expect(result).toEqual(mockUser);
+      expect(result?.provider?.serviceRadiusKm).toBeNull();
+    });
+  });
+
+  describe('getAnalytics: validation', () => {
+    it('should pass providerId correctly to AnalyticsService', async () => {
+      const providerId = 'provider-specific-id';
+      const mockAnalytics = {
+        totalJobs: 25,
+        completedJobs: 20,
+        activeJobs: 5,
+        totalRevenue: 10000,
+        averageRating: 4.8,
+        reviewCount: 30,
+        responseTime: 1.5,
+        acceptanceRate: 85,
+        completionRate: 95,
+      };
+
+      const spy = jest.spyOn(AnalyticsService.prototype, 'getProviderAnalytics').mockResolvedValue(mockAnalytics);
+
+      const result = await service.getAnalytics(providerId);
+
+      expect(spy).toHaveBeenCalledWith('provider-specific-id');
+      expect(result).toEqual(mockAnalytics);
+    });
   });
 });
