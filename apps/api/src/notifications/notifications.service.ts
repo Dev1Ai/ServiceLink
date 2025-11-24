@@ -192,6 +192,102 @@ export class NotificationsService implements OnModuleInit {
     await Promise.all([customerPromise, providerPromise]);
   }
 
+  async notifyCheckIn(payload: { assignmentId: string }) {
+    this.logger.log('Provider checked in: assignment=' + payload.assignmentId);
+
+    // Get assignment with job and participants
+    const assignment = await this.prisma.assignment.findUnique({
+      where: { id: payload.assignmentId },
+      include: {
+        job: { include: { customer: true } },
+        provider: { include: { user: true } },
+        checkpoints: {
+          where: { type: 'CHECK_IN' },
+          orderBy: { timestamp: 'desc' },
+          take: 1,
+        },
+      },
+    });
+
+    if (!assignment) {
+      this.logger.warn(`Assignment ${payload.assignmentId} not found for PROVIDER_CHECKED_IN notification`);
+      return;
+    }
+
+    if (assignment.checkpoints.length === 0) {
+      this.logger.warn(`No check-in checkpoint found for assignment ${payload.assignmentId}`);
+      return;
+    }
+
+    const checkpoint = assignment.checkpoints[0];
+    const checkInTime = checkpoint.timestamp.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+
+    // Notify customer that provider has checked in
+    await this.sendNotification(
+      assignment.job.customerId,
+      NotificationType.PROVIDER_CHECKED_IN,
+      'Provider Arrived',
+      `${assignment.provider.user.name} has checked in at ${checkInTime} for "${assignment.job.title}"`,
+      {
+        jobId: assignment.jobId,
+        assignmentId: payload.assignmentId,
+        providerId: assignment.providerId,
+        providerName: assignment.provider.user.name,
+        timestamp: checkpoint.timestamp.toISOString(),
+      }
+    ).catch(err => {
+      this.logger.error(`Failed to send PROVIDER_CHECKED_IN notification:`, err);
+    });
+  }
+
+  async notifyCheckOut(payload: { assignmentId: string }) {
+    this.logger.log('Provider checked out: assignment=' + payload.assignmentId);
+
+    // Get assignment with job and participants
+    const assignment = await this.prisma.assignment.findUnique({
+      where: { id: payload.assignmentId },
+      include: {
+        job: { include: { customer: true } },
+        provider: { include: { user: true } },
+        checkpoints: {
+          where: { type: 'CHECK_OUT' },
+          orderBy: { timestamp: 'desc' },
+          take: 1,
+        },
+      },
+    });
+
+    if (!assignment) {
+      this.logger.warn(`Assignment ${payload.assignmentId} not found for PROVIDER_CHECKED_OUT notification`);
+      return;
+    }
+
+    if (assignment.checkpoints.length === 0) {
+      this.logger.warn(`No check-out checkpoint found for assignment ${payload.assignmentId}`);
+      return;
+    }
+
+    const checkpoint = assignment.checkpoints[0];
+    const checkOutTime = checkpoint.timestamp.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+
+    // Notify customer that provider has checked out
+    await this.sendNotification(
+      assignment.job.customerId,
+      NotificationType.PROVIDER_CHECKED_OUT,
+      'Provider Completed Visit',
+      `${assignment.provider.user.name} has checked out at ${checkOutTime} for "${assignment.job.title}"`,
+      {
+        jobId: assignment.jobId,
+        assignmentId: payload.assignmentId,
+        providerId: assignment.providerId,
+        providerName: assignment.provider.user.name,
+        timestamp: checkpoint.timestamp.toISOString(),
+      }
+    ).catch(err => {
+      this.logger.error(`Failed to send PROVIDER_CHECKED_OUT notification:`, err);
+    });
+  }
+
   async notifyAssignmentRejected(payload: { jobId: string; assignmentId: string; providerId: string; reason?: string }) {
     this.logger.warn('Assignment rejected: job=' + payload.jobId + ' provider=' + payload.providerId);
   }
@@ -226,16 +322,15 @@ export class NotificationsService implements OnModuleInit {
    */
   async sendNotification(userId: string, type: NotificationType, title: string, body: string, data?: Record<string, unknown>) {
     // Store notification in database
-    // TODO: Re-enable once Prisma Client is regenerated with Notification model
-    // await this.prisma.notification.create({
-    //   data: {
-    //     userId,
-    //     type,
-    //     title,
-    //     body,
-    //     data: data ?? {},
-    //   },
-    // });
+    await this.prisma.notification.create({
+      data: {
+        userId,
+        type,
+        title,
+        body,
+        data: (data ?? {}) as any,
+      },
+    });
 
     // Get active device tokens for user
     const deviceTokens = await this.prisma.deviceToken.findMany({
@@ -291,5 +386,73 @@ export class NotificationsService implements OnModuleInit {
     } else {
       this.logger.log(`[DRY RUN] Would send "${title}" to ${deviceTokens.length} devices for user ${userId}`);
     }
+  }
+
+  /**
+   * Get notification history for a user
+   * @param userId User ID
+   * @param limit Maximum number of notifications to return
+   * @param unreadOnly Only return unread notifications
+   */
+  async getNotifications(userId: string, limit = 50, unreadOnly = false) {
+    return this.prisma.notification.findMany({
+      where: {
+        userId,
+        ...(unreadOnly && { read: false }),
+      },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+    });
+  }
+
+  /**
+   * Mark a notification as read
+   * @param notificationId Notification ID
+   * @param userId User ID (for authorization)
+   */
+  async markAsRead(notificationId: string, userId: string) {
+    const notification = await this.prisma.notification.findUnique({
+      where: { id: notificationId },
+    });
+
+    if (!notification) {
+      throw new Error('Notification not found');
+    }
+
+    if (notification.userId !== userId) {
+      throw new Error('Not authorized');
+    }
+
+    return this.prisma.notification.update({
+      where: { id: notificationId },
+      data: { read: true },
+    });
+  }
+
+  /**
+   * Mark all notifications as read for a user
+   * @param userId User ID
+   */
+  async markAllAsRead(userId: string) {
+    return this.prisma.notification.updateMany({
+      where: {
+        userId,
+        read: false,
+      },
+      data: { read: true },
+    });
+  }
+
+  /**
+   * Get unread notification count for a user
+   * @param userId User ID
+   */
+  async getUnreadCount(userId: string): Promise<number> {
+    return this.prisma.notification.count({
+      where: {
+        userId,
+        read: false,
+      },
+    });
   }
 }

@@ -327,8 +327,8 @@ export class AssignmentsService {
 
     this.logger.log(`Provider checked in to assignment ${assignmentId}`);
 
-    // TODO: Send notification to customer
-    // await this.notifications.notifyCheckIn({ assignmentId });
+    // Send notification to customer
+    await this.notifications.notifyCheckIn({ assignmentId });
 
     return checkpoint;
   }
@@ -381,8 +381,8 @@ export class AssignmentsService {
 
     this.logger.log(`Provider checked out from assignment ${assignmentId}`);
 
-    // TODO: Send notification to customer
-    // await this.notifications.notifyCheckOut({ assignmentId });
+    // Send notification to customer
+    await this.notifications.notifyCheckOut({ assignmentId });
 
     return checkpoint;
   }
