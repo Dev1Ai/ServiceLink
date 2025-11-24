@@ -330,7 +330,20 @@
     - Error handling: graceful notification failure handling, job creation continues on errors
     - NotificationType.JOB_CREATED usage, metadata verification (jobId, jobKey, jobTitle)
     - All 779 unit tests passing across 46 test suites (+8 tests)
+  - ✅ PR #86: ReviewsService enhanced tests (MERGED - 2025-11-24)
+    - 10 comprehensive unit tests for ReviewsService (6 → 16 tests, +167% increase)
+    - getReviewsForJob tests: specific job reviews, empty results, ordering
+    - getReviewsForUser tests: user reviews, empty results, ordering
+    - Provider rating cache tests: update logic, non-provider handling, edge cases
+    - Cache calculation verification: averageRating and reviewCount accuracy
+    - All 789 unit tests passing across 46 test suites (+10 tests)
+  - ✅ PR #87: PaymentsService enhanced tests (MERGED - 2025-11-24)
+    - 13 comprehensive unit tests for PaymentsService (7 → 20 tests, +186% increase)
+    - capturePayment tests: completed assignments, payment not found, unauthorized customers, uncompleted assignments, Stripe configuration
+    - createPayout tests: provider accounts, provider not found, missing Stripe accounts, Stripe configuration
+    - Error handling tests: Stripe not configured scenarios, payment validation errors
+    - All 802 unit tests passing across 46 test suites (+13 tests)
   - 🎉 **M11 COMPLETE!** All 5 phases delivered. Milestones M3-M11 fully implemented.
-  - 🎉 **Post-M11 Enhancements!** 6 additional features merged: photo thumbnails, enhanced notifications, notification history API, PhotosService tests, GPS feature tests, JobsService tests
+  - 🎉 **Post-M11 Enhancements!** 8 additional features merged: photo thumbnails, enhanced notifications, notification history API, PhotosService tests, GPS feature tests, JobsService tests, ReviewsService tests, PaymentsService tests
 
 Last updated: 2025-11-24
