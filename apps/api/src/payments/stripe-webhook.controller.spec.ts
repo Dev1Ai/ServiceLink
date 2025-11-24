@@ -1,13 +1,23 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { StripeWebhookController } from './stripe-webhook.controller';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
+import { BadRequestException } from '@nestjs/common';
+import { Request } from 'express';
 
 describe('StripeWebhookController', () => {
   let controller: StripeWebhookController;
   let prisma: PrismaService;
-  let config: ConfigService;
+  let configService: ConfigService;
+
+  const mockStripe = {
+    webhooks: {
+      constructEvent: jest.fn(),
+    },
+    paymentIntents: {
+      retrieve: jest.fn(),
+    },
+  };
 
   const mockPrismaService = {
     payment: {
@@ -21,32 +31,19 @@ describe('StripeWebhookController', () => {
   };
 
   const mockConfigService = {
-    get: jest.fn(),
-  };
-
-  // Mock Stripe instance
-  const mockStripe = {
-    webhooks: {
-      constructEvent: jest.fn(),
-    },
-    paymentIntents: {
-      retrieve: jest.fn(),
-    },
+    get: jest.fn((key: string) => {
+      if (key === 'STRIPE_SECRET_KEY') return 'sk_test_valid_key';
+      if (key === 'STRIPE_WEBHOOK_SECRET') return 'whsec_test_secret';
+      return null;
+    }),
   };
 
   beforeEach(async () => {
     jest.clearAllMocks();
-    jest.resetModules();
 
-    // Mock Stripe module
+    // Mock require for Stripe
     jest.mock('stripe', () => {
       return jest.fn().mockImplementation(() => mockStripe);
-    });
-
-    mockConfigService.get.mockImplementation((key: string) => {
-      if (key === 'STRIPE_SECRET_KEY') return 'sk_test_mock_key';
-      if (key === 'STRIPE_WEBHOOK_SECRET') return 'whsec_mock_secret';
-      return null;
     });
 
     const module: TestingModule = await Test.createTestingModule({
@@ -59,9 +56,9 @@ describe('StripeWebhookController', () => {
 
     controller = module.get<StripeWebhookController>(StripeWebhookController);
     prisma = module.get<PrismaService>(PrismaService);
-    config = module.get<ConfigService>(ConfigService);
+    configService = module.get<ConfigService>(ConfigService);
 
-    // Inject mock Stripe instance
+    // Replace stripe instance with mock
     (controller as any).stripe = mockStripe;
   });
 
@@ -69,56 +66,87 @@ describe('StripeWebhookController', () => {
     expect(controller).toBeDefined();
   });
 
-  describe('handleWebhook', () => {
-    const mockRequest = {
-      rawBody: Buffer.from('mock-raw-body'),
-    } as any;
-
-    it('should return received:false when Stripe not configured', async () => {
+  describe('handleWebhook - Configuration', () => {
+    it('should return received:false if Stripe not configured', async () => {
       (controller as any).stripe = null;
 
-      const result = await controller.handleWebhook('sig', mockRequest);
+      const result = await controller.handleWebhook('sig_test', {
+        rawBody: Buffer.from('test'),
+      } as any);
 
       expect(result).toEqual({ received: false });
     });
 
-    it('should return received:false when webhook secret not configured', async () => {
-      mockConfigService.get.mockReturnValue(null);
+    it('should return received:false if webhook secret not configured', async () => {
+      mockConfigService.get.mockImplementation((key: string) => {
+        if (key === 'STRIPE_WEBHOOK_SECRET') return null;
+        if (key === 'STRIPE_SECRET_KEY') return 'sk_test_valid_key';
+        return null;
+      });
 
-      const result = await controller.handleWebhook('sig', mockRequest);
+      const result = await controller.handleWebhook('sig_test', {
+        rawBody: Buffer.from('test'),
+      } as any);
 
       expect(result).toEqual({ received: false });
     });
 
     it('should throw BadRequestException on signature verification failure', async () => {
+      // Reset config to return webhook secret
+      mockConfigService.get.mockImplementation((key: string) => {
+        if (key === 'STRIPE_SECRET_KEY') return 'sk_test_valid_key';
+        if (key === 'STRIPE_WEBHOOK_SECRET') return 'whsec_test_secret';
+        return null;
+      });
+
       mockStripe.webhooks.constructEvent.mockImplementation(() => {
         throw new Error('Invalid signature');
       });
 
-      await expect(controller.handleWebhook('invalid-sig', mockRequest)).rejects.toThrow(
-        BadRequestException,
-      );
-      await expect(controller.handleWebhook('invalid-sig', mockRequest)).rejects.toThrow(
-        'Webhook Error: Invalid signature',
-      );
+      await expect(
+        controller.handleWebhook('invalid_sig', {
+          rawBody: Buffer.from('test'),
+        } as any),
+      ).rejects.toThrow(BadRequestException);
+
+      await expect(
+        controller.handleWebhook('invalid_sig', {
+          rawBody: Buffer.from('test'),
+        } as any),
+      ).rejects.toThrow('Webhook Error: Invalid signature');
+    });
+  });
+
+  describe('handleWebhook - payment_intent.succeeded', () => {
+    beforeEach(() => {
+      mockConfigService.get.mockImplementation((key: string) => {
+        if (key === 'STRIPE_SECRET_KEY') return 'sk_test_valid_key';
+        if (key === 'STRIPE_WEBHOOK_SECRET') return 'whsec_test_secret';
+        return null;
+      });
     });
 
-    it('should process payment_intent.succeeded event', async () => {
-      const mockEvent = {
-        type: 'payment_intent.succeeded',
-        data: {
-          object: { id: 'pi_123' },
-        },
-      };
-      mockStripe.webhooks.constructEvent.mockReturnValue(mockEvent);
-      mockPrismaService.payment.findUnique.mockResolvedValue({ id: 'payment-1' });
-      mockPrismaService.payment.update.mockResolvedValue({});
+    it('should handle payment_intent.succeeded event', async () => {
+      const paymentIntent = { id: 'pi_test123' };
+      const mockPayment = { id: 'payment-1', stripePaymentIntentId: 'pi_test123' };
 
-      const result = await controller.handleWebhook('sig', mockRequest);
+      mockStripe.webhooks.constructEvent.mockReturnValue({
+        type: 'payment_intent.succeeded',
+        data: { object: paymentIntent },
+      });
+      mockPrismaService.payment.findUnique.mockResolvedValue(mockPayment);
+      mockPrismaService.payment.update.mockResolvedValue({
+        ...mockPayment,
+        status: 'succeeded',
+      });
+
+      const result = await controller.handleWebhook('sig_test', {
+        rawBody: Buffer.from('test'),
+      } as any);
 
       expect(result).toEqual({ received: true });
       expect(prisma.payment.findUnique).toHaveBeenCalledWith({
-        where: { stripePaymentIntentId: 'pi_123' },
+        where: { stripePaymentIntentId: 'pi_test123' },
       });
       expect(prisma.payment.update).toHaveBeenCalledWith({
         where: { id: 'payment-1' },
@@ -129,18 +157,37 @@ describe('StripeWebhookController', () => {
       });
     });
 
-    it('should process payment_intent.payment_failed event', async () => {
-      const mockEvent = {
-        type: 'payment_intent.payment_failed',
-        data: {
-          object: { id: 'pi_456' },
-        },
-      };
-      mockStripe.webhooks.constructEvent.mockReturnValue(mockEvent);
-      mockPrismaService.payment.findUnique.mockResolvedValue({ id: 'payment-2' });
-      mockPrismaService.payment.update.mockResolvedValue({});
+    it('should handle payment_intent.succeeded when payment not found', async () => {
+      mockStripe.webhooks.constructEvent.mockReturnValue({
+        type: 'payment_intent.succeeded',
+        data: { object: { id: 'pi_unknown' } },
+      });
+      mockPrismaService.payment.findUnique.mockResolvedValue(null);
 
-      const result = await controller.handleWebhook('sig', mockRequest);
+      const result = await controller.handleWebhook('sig_test', {
+        rawBody: Buffer.from('test'),
+      } as any);
+
+      expect(result).toEqual({ received: true });
+      expect(prisma.payment.update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('handleWebhook - payment_intent.payment_failed', () => {
+    it('should handle payment_intent.payment_failed event', async () => {
+      const paymentIntent = { id: 'pi_failed123' };
+      const mockPayment = { id: 'payment-2', stripePaymentIntentId: 'pi_failed123' };
+
+      mockStripe.webhooks.constructEvent.mockReturnValue({
+        type: 'payment_intent.payment_failed',
+        data: { object: paymentIntent },
+      });
+      mockPrismaService.payment.findUnique.mockResolvedValue(mockPayment);
+      mockPrismaService.payment.update.mockResolvedValue({ ...mockPayment, status: 'failed' });
+
+      const result = await controller.handleWebhook('sig_test', {
+        rawBody: Buffer.from('test'),
+      } as any);
 
       expect(result).toEqual({ received: true });
       expect(prisma.payment.update).toHaveBeenCalledWith({
@@ -149,49 +196,83 @@ describe('StripeWebhookController', () => {
       });
     });
 
-    it('should process charge.dispute.created event', async () => {
-      const mockEvent = {
-        type: 'charge.dispute.created',
-        data: {
-          object: {
-            id: 'dp_789',
-            charge: 'ch_123',
-            payment_intent: 'pi_123',
-          },
-        },
-      };
-      mockStripe.webhooks.constructEvent.mockReturnValue(mockEvent);
-      mockStripe.paymentIntents.retrieve.mockResolvedValue({ id: 'pi_123' });
-      mockPrismaService.payment.findUnique.mockResolvedValue({ id: 'payment-3' });
-      mockPrismaService.payment.update.mockResolvedValue({});
+    it('should handle payment_failed when payment not found', async () => {
+      mockStripe.webhooks.constructEvent.mockReturnValue({
+        type: 'payment_intent.payment_failed',
+        data: { object: { id: 'pi_unknown' } },
+      });
+      mockPrismaService.payment.findUnique.mockResolvedValue(null);
 
-      const result = await controller.handleWebhook('sig', mockRequest);
+      const result = await controller.handleWebhook('sig_test', {
+        rawBody: Buffer.from('test'),
+      } as any);
 
       expect(result).toEqual({ received: true });
-      expect(mockStripe.paymentIntents.retrieve).toHaveBeenCalledWith('pi_123');
+      expect(prisma.payment.update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('handleWebhook - charge.dispute.created', () => {
+    it('should handle dispute created event', async () => {
+      const dispute = { id: 'dp_test', charge: 'ch_test', payment_intent: 'pi_test' };
+      const mockPayment = { id: 'payment-3', stripePaymentIntentId: 'pi_test' };
+
+      mockStripe.webhooks.constructEvent.mockReturnValue({
+        type: 'charge.dispute.created',
+        data: { object: dispute },
+      });
+      mockStripe.paymentIntents.retrieve.mockResolvedValue({ id: 'pi_test' });
+      mockPrismaService.payment.findUnique.mockResolvedValue(mockPayment);
+      mockPrismaService.payment.update.mockResolvedValue({ ...mockPayment, status: 'disputed' });
+
+      const result = await controller.handleWebhook('sig_test', {
+        rawBody: Buffer.from('test'),
+      } as any);
+
+      expect(result).toEqual({ received: true });
+      expect(mockStripe.paymentIntents.retrieve).toHaveBeenCalledWith('pi_test');
       expect(prisma.payment.update).toHaveBeenCalledWith({
         where: { id: 'payment-3' },
         data: { status: 'disputed' },
       });
     });
 
-    it('should process charge.dispute.closed event with won status', async () => {
-      const mockEvent = {
-        type: 'charge.dispute.closed',
-        data: {
-          object: {
-            id: 'dp_789',
-            status: 'won',
-            payment_intent: 'pi_123',
-          },
-        },
-      };
-      mockStripe.webhooks.constructEvent.mockReturnValue(mockEvent);
-      mockStripe.paymentIntents.retrieve.mockResolvedValue({ id: 'pi_123' });
-      mockPrismaService.payment.findUnique.mockResolvedValue({ id: 'payment-4' });
-      mockPrismaService.payment.update.mockResolvedValue({});
+    it('should handle dispute created when payment not found', async () => {
+      mockStripe.webhooks.constructEvent.mockReturnValue({
+        type: 'charge.dispute.created',
+        data: { object: { id: 'dp_test', payment_intent: 'pi_unknown' } },
+      });
+      mockStripe.paymentIntents.retrieve.mockResolvedValue({ id: 'pi_unknown' });
+      mockPrismaService.payment.findUnique.mockResolvedValue(null);
 
-      const result = await controller.handleWebhook('sig', mockRequest);
+      const result = await controller.handleWebhook('sig_test', {
+        rawBody: Buffer.from('test'),
+      } as any);
+
+      expect(result).toEqual({ received: true });
+      expect(prisma.payment.update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('handleWebhook - charge.dispute.closed', () => {
+    it('should handle dispute won', async () => {
+      const dispute = { id: 'dp_won', status: 'won', payment_intent: 'pi_test' };
+      const mockPayment = { id: 'payment-4', stripePaymentIntentId: 'pi_test' };
+
+      mockStripe.webhooks.constructEvent.mockReturnValue({
+        type: 'charge.dispute.closed',
+        data: { object: dispute },
+      });
+      mockStripe.paymentIntents.retrieve.mockResolvedValue({ id: 'pi_test' });
+      mockPrismaService.payment.findUnique.mockResolvedValue(mockPayment);
+      mockPrismaService.payment.update.mockResolvedValue({
+        ...mockPayment,
+        status: 'succeeded',
+      });
+
+      const result = await controller.handleWebhook('sig_test', {
+        rawBody: Buffer.from('test'),
+      } as any);
 
       expect(result).toEqual({ received: true });
       expect(prisma.payment.update).toHaveBeenCalledWith({
@@ -200,23 +281,24 @@ describe('StripeWebhookController', () => {
       });
     });
 
-    it('should process charge.dispute.closed event with lost status', async () => {
-      const mockEvent = {
-        type: 'charge.dispute.closed',
-        data: {
-          object: {
-            id: 'dp_789',
-            status: 'lost',
-            payment_intent: 'pi_123',
-          },
-        },
-      };
-      mockStripe.webhooks.constructEvent.mockReturnValue(mockEvent);
-      mockStripe.paymentIntents.retrieve.mockResolvedValue({ id: 'pi_123' });
-      mockPrismaService.payment.findUnique.mockResolvedValue({ id: 'payment-5' });
-      mockPrismaService.payment.update.mockResolvedValue({});
+    it('should handle dispute lost', async () => {
+      const dispute = { id: 'dp_lost', status: 'lost', payment_intent: 'pi_test' };
+      const mockPayment = { id: 'payment-5', stripePaymentIntentId: 'pi_test' };
 
-      const result = await controller.handleWebhook('sig', mockRequest);
+      mockStripe.webhooks.constructEvent.mockReturnValue({
+        type: 'charge.dispute.closed',
+        data: { object: dispute },
+      });
+      mockStripe.paymentIntents.retrieve.mockResolvedValue({ id: 'pi_test' });
+      mockPrismaService.payment.findUnique.mockResolvedValue(mockPayment);
+      mockPrismaService.payment.update.mockResolvedValue({
+        ...mockPayment,
+        status: 'dispute_lost',
+      });
+
+      const result = await controller.handleWebhook('sig_test', {
+        rawBody: Buffer.from('test'),
+      } as any);
 
       expect(result).toEqual({ received: true });
       expect(prisma.payment.update).toHaveBeenCalledWith({
@@ -225,22 +307,42 @@ describe('StripeWebhookController', () => {
       });
     });
 
-    it('should process transfer.paid event', async () => {
-      const mockEvent = {
-        type: 'transfer.paid',
-        data: {
-          object: { id: 'tr_123' },
-        },
-      };
-      mockStripe.webhooks.constructEvent.mockReturnValue(mockEvent);
-      mockPrismaService.payout.findFirst.mockResolvedValue({ id: 'payout-1' });
-      mockPrismaService.payout.update.mockResolvedValue({});
+    it('should handle dispute closed when payment not found', async () => {
+      mockStripe.webhooks.constructEvent.mockReturnValue({
+        type: 'charge.dispute.closed',
+        data: { object: { id: 'dp_test', status: 'won', payment_intent: 'pi_unknown' } },
+      });
+      mockStripe.paymentIntents.retrieve.mockResolvedValue({ id: 'pi_unknown' });
+      mockPrismaService.payment.findUnique.mockResolvedValue(null);
 
-      const result = await controller.handleWebhook('sig', mockRequest);
+      const result = await controller.handleWebhook('sig_test', {
+        rawBody: Buffer.from('test'),
+      } as any);
+
+      expect(result).toEqual({ received: true });
+      expect(prisma.payment.update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('handleWebhook - transfer.paid', () => {
+    it('should handle transfer paid event', async () => {
+      const transfer = { id: 'tr_test' };
+      const mockPayout = { id: 'payout-1', stripeTransferId: 'tr_test' };
+
+      mockStripe.webhooks.constructEvent.mockReturnValue({
+        type: 'transfer.paid',
+        data: { object: transfer },
+      });
+      mockPrismaService.payout.findFirst.mockResolvedValue(mockPayout);
+      mockPrismaService.payout.update.mockResolvedValue({ ...mockPayout, status: 'paid' });
+
+      const result = await controller.handleWebhook('sig_test', {
+        rawBody: Buffer.from('test'),
+      } as any);
 
       expect(result).toEqual({ received: true });
       expect(prisma.payout.findFirst).toHaveBeenCalledWith({
-        where: { stripeTransferId: 'tr_123' },
+        where: { stripeTransferId: 'tr_test' },
       });
       expect(prisma.payout.update).toHaveBeenCalledWith({
         where: { id: 'payout-1' },
@@ -251,21 +353,37 @@ describe('StripeWebhookController', () => {
       });
     });
 
-    it('should process transfer.failed event', async () => {
-      const mockEvent = {
-        type: 'transfer.failed',
-        data: {
-          object: {
-            id: 'tr_456',
-            failure_message: 'Insufficient funds',
-          },
-        },
-      };
-      mockStripe.webhooks.constructEvent.mockReturnValue(mockEvent);
-      mockPrismaService.payout.findFirst.mockResolvedValue({ id: 'payout-2' });
-      mockPrismaService.payout.update.mockResolvedValue({});
+    it('should handle transfer paid when payout not found', async () => {
+      mockStripe.webhooks.constructEvent.mockReturnValue({
+        type: 'transfer.paid',
+        data: { object: { id: 'tr_unknown' } },
+      });
+      mockPrismaService.payout.findFirst.mockResolvedValue(null);
 
-      const result = await controller.handleWebhook('sig', mockRequest);
+      const result = await controller.handleWebhook('sig_test', {
+        rawBody: Buffer.from('test'),
+      } as any);
+
+      expect(result).toEqual({ received: true });
+      expect(prisma.payout.update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('handleWebhook - transfer.failed', () => {
+    it('should handle transfer failed event', async () => {
+      const transfer = { id: 'tr_failed', failure_message: 'Insufficient funds' };
+      const mockPayout = { id: 'payout-2', stripeTransferId: 'tr_failed' };
+
+      mockStripe.webhooks.constructEvent.mockReturnValue({
+        type: 'transfer.failed',
+        data: { object: transfer },
+      });
+      mockPrismaService.payout.findFirst.mockResolvedValue(mockPayout);
+      mockPrismaService.payout.update.mockResolvedValue({ ...mockPayout, status: 'failed' });
+
+      const result = await controller.handleWebhook('sig_test', {
+        rawBody: Buffer.from('test'),
+      } as any);
 
       expect(result).toEqual({ received: true });
       expect(prisma.payout.update).toHaveBeenCalledWith({
@@ -277,65 +395,20 @@ describe('StripeWebhookController', () => {
       });
     });
 
-    it('should handle unhandled event types', async () => {
-      const mockEvent = {
-        type: 'customer.created',
-        data: { object: {} },
-      };
-      mockStripe.webhooks.constructEvent.mockReturnValue(mockEvent);
+    it('should handle transfer failed with default failure message', async () => {
+      const transfer = { id: 'tr_failed' };
+      const mockPayout = { id: 'payout-3', stripeTransferId: 'tr_failed' };
 
-      const result = await controller.handleWebhook('sig', mockRequest);
-
-      expect(result).toEqual({ received: true });
-    });
-
-    it('should not update payment if not found for payment_intent.succeeded', async () => {
-      const mockEvent = {
-        type: 'payment_intent.succeeded',
-        data: {
-          object: { id: 'pi_nonexistent' },
-        },
-      };
-      mockStripe.webhooks.constructEvent.mockReturnValue(mockEvent);
-      mockPrismaService.payment.findUnique.mockResolvedValue(null);
-
-      const result = await controller.handleWebhook('sig', mockRequest);
-
-      expect(result).toEqual({ received: true });
-      expect(prisma.payment.update).not.toHaveBeenCalled();
-    });
-
-    it('should not update payout if not found for transfer.paid', async () => {
-      const mockEvent = {
-        type: 'transfer.paid',
-        data: {
-          object: { id: 'tr_nonexistent' },
-        },
-      };
-      mockStripe.webhooks.constructEvent.mockReturnValue(mockEvent);
-      mockPrismaService.payout.findFirst.mockResolvedValue(null);
-
-      const result = await controller.handleWebhook('sig', mockRequest);
-
-      expect(result).toEqual({ received: true });
-      expect(prisma.payout.update).not.toHaveBeenCalled();
-    });
-
-    it('should handle transfer.failed with missing failure_message', async () => {
-      const mockEvent = {
+      mockStripe.webhooks.constructEvent.mockReturnValue({
         type: 'transfer.failed',
-        data: {
-          object: {
-            id: 'tr_789',
-            failure_message: null,
-          },
-        },
-      };
-      mockStripe.webhooks.constructEvent.mockReturnValue(mockEvent);
-      mockPrismaService.payout.findFirst.mockResolvedValue({ id: 'payout-3' });
-      mockPrismaService.payout.update.mockResolvedValue({});
+        data: { object: transfer },
+      });
+      mockPrismaService.payout.findFirst.mockResolvedValue(mockPayout);
+      mockPrismaService.payout.update.mockResolvedValue({ ...mockPayout, status: 'failed' });
 
-      const result = await controller.handleWebhook('sig', mockRequest);
+      const result = await controller.handleWebhook('sig_test', {
+        rawBody: Buffer.from('test'),
+      } as any);
 
       expect(result).toEqual({ received: true });
       expect(prisma.payout.update).toHaveBeenCalledWith({
@@ -347,47 +420,48 @@ describe('StripeWebhookController', () => {
       });
     });
 
-    it('should throw error if event processing fails', async () => {
-      const mockEvent = {
-        type: 'payment_intent.succeeded',
-        data: {
-          object: { id: 'pi_error' },
-        },
-      };
-      mockStripe.webhooks.constructEvent.mockReturnValue(mockEvent);
-      mockPrismaService.payment.findUnique.mockRejectedValue(new Error('Database error'));
+    it('should handle transfer failed when payout not found', async () => {
+      mockStripe.webhooks.constructEvent.mockReturnValue({
+        type: 'transfer.failed',
+        data: { object: { id: 'tr_unknown' } },
+      });
+      mockPrismaService.payout.findFirst.mockResolvedValue(null);
 
-      await expect(controller.handleWebhook('sig', mockRequest)).rejects.toThrow('Database error');
+      const result = await controller.handleWebhook('sig_test', {
+        rawBody: Buffer.from('test'),
+      } as any);
+
+      expect(result).toEqual({ received: true });
+      expect(prisma.payout.update).not.toHaveBeenCalled();
     });
   });
 
-  describe('Constructor', () => {
-    it('should not initialize Stripe if key not configured', () => {
-      mockConfigService.get.mockReturnValue(null);
+  describe('handleWebhook - Unhandled events', () => {
+    it('should handle unhandled event types', async () => {
+      mockStripe.webhooks.constructEvent.mockReturnValue({
+        type: 'customer.created',
+        data: { object: {} },
+      });
 
-      const module = Test.createTestingModule({
-        controllers: [StripeWebhookController],
-        providers: [
-          { provide: PrismaService, useValue: mockPrismaService },
-          { provide: ConfigService, useValue: mockConfigService },
-        ],
-      }).compile();
+      const result = await controller.handleWebhook('sig_test', {
+        rawBody: Buffer.from('test'),
+      } as any);
 
-      expect(module).toBeDefined();
+      expect(result).toEqual({ received: true });
     });
 
-    it('should not initialize Stripe if key contains test_or_replace', () => {
-      mockConfigService.get.mockReturnValue('sk_test_or_replace_me');
+    it('should throw error on webhook processing failure', async () => {
+      mockStripe.webhooks.constructEvent.mockReturnValue({
+        type: 'payment_intent.succeeded',
+        data: { object: { id: 'pi_test' } },
+      });
+      mockPrismaService.payment.findUnique.mockRejectedValue(new Error('Database error'));
 
-      const module = Test.createTestingModule({
-        controllers: [StripeWebhookController],
-        providers: [
-          { provide: PrismaService, useValue: mockPrismaService },
-          { provide: ConfigService, useValue: mockConfigService },
-        ],
-      }).compile();
-
-      expect(module).toBeDefined();
+      await expect(
+        controller.handleWebhook('sig_test', {
+          rawBody: Buffer.from('test'),
+        } as any),
+      ).rejects.toThrow('Database error');
     });
   });
 });
